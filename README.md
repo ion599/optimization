@@ -5,7 +5,7 @@ Setup
 -----
 Run `setup.m`.
 
-Run
+Running
 -----
 Run `main.m`.
 
