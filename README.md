@@ -4,7 +4,14 @@ Convex optimization for traffic demand estimation
 
 Setup
 -----
-Run `setup.m`.
+Python dependencies (once only):
+
+    sudo easy_install pip
+    pip install -r requirements.txt
+
+Matlab dependencies (must be run every time):
+
+    setup.m
 
 Running
 -----
