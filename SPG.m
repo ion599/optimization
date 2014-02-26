@@ -1,4 +1,4 @@
-function [w] = SPG(funObj,w,options)
+function [w] = SPG(funObj,w,N,options)
 
 %% Process Options
 if nargin < 4
@@ -14,9 +14,9 @@ if verbose
 end
 
 %% Evaluate Initial Point
-p = length(w);
+n = length(w);
 w = [w.*(w>0);-w.*(w<0)]; % size of w multiplied by 2
-[f,g] = nonNegGrad(funObj,w,p);
+[f,g] = nonNegGrad(funObj,w,n);
 funEvals = 1;
 
 % Compute working set and check optimality
@@ -26,7 +26,7 @@ if optCond < optTol
     if verbose
         fprintf('First-order optimality satisfied at initial point\n');
     end
-    w = w(1:p)-w(p+1:end);
+    w = w(1:n)-w(n+1:end);
     return;
 end
 
@@ -72,8 +72,8 @@ for i = 1:maxIter
     end
     
     % Compute projected point
-    w_new = project(w+t*d,p);
-    [f_new,g_new] = nonNegGrad(funObj,w_new,p);
+    w_new = project(w+t*d,n,N);
+    [f_new,g_new] = nonNegGrad(funObj,w_new,n);
     funEvals = funEvals+1;
     
     % Line search along projection arc
@@ -119,8 +119,8 @@ for i = 1:maxIter
         end
         
         % Compute projected point
-        w_new = project(w+t*d,p);
-        [f_new,g_new] = nonNegGrad(funObj,w_new,p);
+        w_new = project(w+t*d,n,N);
+        [f_new,g_new] = nonNegGrad(funObj,w_new,n);
         funEvals = funEvals+1;
     end
     
@@ -134,7 +134,7 @@ for i = 1:maxIter
     
     % Output Log
     if verbose
-        fprintf('%6d %6d %8.5e %8.5e %8.5e %6d\n',i,funEvals,t,f,max(abs(g(W))),nnz(w(1:p)-w(p+1:end)));
+        fprintf('%6d %6d %8.5e %8.5e %8.5e %6d\n',i,funEvals,t,f,max(abs(g(W))),nnz(w(1:n)-w(n+1:end)));
     end
     
     % Check Optimality
@@ -162,20 +162,26 @@ for i = 1:maxIter
         break;
     end
 end
-w = w(1:p)-w(p+1:end);
+w = w(1:n)-w(n+1:end);
 
 end
 
 %% Non-negative variable gradient calculation
-function [f,g,H] = nonNegGrad(funObj,w,p)
+function [f,g,H] = nonNegGrad(funObj,w,n)
 
-[f,g] = funObj(w(1:p)-w(p+1:end));
+[f,g] = funObj(w(1:n)-w(n+1:end));
 
 g = [g;-g];
 end
 
-function [w] = project(w,p)
-w = w(1:p)-w(p+1:end);
-w = PAValgo(w,ones(p,1),0,1);
+function [w] = project(w,n,N)
+w = w(1:n)-w(n+1:end);
+
+k=0;
+for i=1:length(N)
+    w(k+1:k+N(i)-1) = PAValgo(w(k+1:k+N(i)-1),ones(N(i)-1,1),0,1);
+    k = k+N(i)-1;
+end
+
 w = [w.*(w>0);-w.*(w<0)];
 end

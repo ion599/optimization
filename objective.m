@@ -15,7 +15,7 @@ g = zeros(n-p,1);
 ind = 1;
 k = 0;
 for i=1:p
-    u(ind) = z(ind-k);
+    u(ind) = z(ind-k); % u = x_0 + Nz
     ind = ind+1;
     for j=2:(N(i)-1)
         u(ind) = z(ind-k)-z(ind-k-1);

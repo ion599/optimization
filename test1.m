@@ -1,4 +1,6 @@
 %% Generate Some Synthetic Data
+% Small test program: This runs like main, but initialized at x_true
+
 clc; clear all
 
 % dimensions of the problem
