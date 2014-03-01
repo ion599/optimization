@@ -26,7 +26,9 @@ if ~exist('repeat','var')
     repeat = 1;
 end
 
-models = {'small_graph_random', 'small_graph_OD', 'small_graph'};
+% models = {'small_graph_random', 'small_graph_OD', 'small_graph', ...
+%           'small_graph_OD_dense'};
+models = {'small_graph_OD_dense'};
 
 date = datestr(now, 30);
 
@@ -40,7 +42,8 @@ for i = 1:repeat
 
 
         subdir = char(strcat(num2str(vec(1)), '_', num2str(vec(2)), ...
-            '_', num2str(vec(3)), '_', num2str(vec(4)), '_', num2str(date), '_', num2str(numsamples)));
+            '_', num2str(vec(3)), '_', num2str(vec(4)), '_', num2str(date), ...
+            '_', num2str(numsamples)));
 
         if strcmp(type, 'traffic')
             rows = vec(1);
@@ -48,7 +51,9 @@ for i = 1:repeat
             k = vec(3);
             d = vec(4);
 
-            command = sprintf('%s static_matrix.py --prefix %s%s_ --num_rows %d --num_cols %d --num_routes_per_od %d --num_nonzero_routes_per_o %d', python, ...
+            command = sprintf(['%s static_matrix.py --prefix %s%s_ ' ...
+                '--num_rows %d --num_cols %d --num_routes_per_od %d ' ...
+                '--num_nonzero_routes_per_o %d'], python, ...
             raw_directory, subdir, rows, cols, k, d);
 
             numsamples = numsamples + 1;
@@ -63,7 +68,8 @@ for i = 1:repeat
                 p.model_type = model{1};
                 model_to_testparameters(p,filename);
                 p.sparsity = sum(abs(p.real_a)>1e-6)/length(p.real_a);
-                save(sprintf('%s/%s-%s-%d',param_directory,datestr(now, 30),getenv('USER'), numsamples),'p');
+                save(sprintf('%s/%s-%s-%d',param_directory,datestr(now, 30), ...
+                    getenv('USER'), numsamples),'p');
             end
         end
 
@@ -73,8 +79,11 @@ for i = 1:repeat
             num_vars_per_block = vec(3);
             num_nonzeros = vec(4);
 
-            command = sprintf('%s random_matrix.py --prefix %s%s_ --num_constraints %d --num_blocks %d --num_vars_per_block %d --num_nonzeros %d', python, ...
-                raw_directory, subdir, num_constraints, num_blocks, num_vars_per_block, num_nonzeros);
+            command = sprintf(['%s random_matrix.py --prefix %s%s_ '...
+                '--num_constraints %d --num_blocks %d --num_vars_per_block '...
+                '%d --num_nonzeros %d'], python, ...
+                raw_directory, subdir, num_constraints, num_blocks, ...
+                num_vars_per_block, num_nonzeros);
 
             numsamples = numsamples + 1;
             fprintf('Generating "raw" for %s\n', subdir);
@@ -94,7 +103,8 @@ for i = 1:repeat
             p.model_type = 'gaussian';
             model_to_testparameters(p,filename);
             p.sparsity = sum(abs(p.real_a)>1e-6)/length(p.real_a);
-            save(sprintf('%s/%s-%s-%d',param_directory,datestr(now, 30),getenv('USER'), numsamples),'p');
+            save(sprintf('%s/%s-%s-%d',param_directory,datestr(now, 30),...
+                getenv('USER'), numsamples),'p');
         end
     end
 end

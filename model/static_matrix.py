@@ -78,6 +78,8 @@ def generate_static_matrix_OD(graph, routes, sensors, flow_portions,
       # skip OD blocks that are all 0
       if flow_from_each_node[origin][dest] == 0:
           continue
+      if flow_from_each_node[origin][dest] == []:
+          continue
 
       # build phi, alpha, mu block by block (1 origin)
       for j in xrange(len(selected_route_indices_by_OD)):
@@ -98,6 +100,7 @@ def generate_static_matrix_OD(graph, routes, sensors, flow_portions,
 
   return np.hstack(phis), np.concatenate(alphas), np.concatenate(mus), f, \
           np.array(num_routes)
+
           
 def generate_random_matrix(graph, routes, sensors, flow_portions,
                   flow_from_each_node=1.0):
@@ -157,6 +160,17 @@ def export_matrices(prefix, num_rows, num_cols, num_routes_per_od_pair, num_nonz
           sensors, flow_portions)
   scipy.io.savemat(prefix + 'small_graph_random.mat', {'phi': phi, 'real_a': alpha, 'w': mu,
           'f': f, 'block_sizes': num_routes}, oned_as='column')
+
+  # same graph but dense OD blocks (CANNOT be used for comparison with above)
+  (flow_portions,flow_portions_OD,flow_OD) = flows.annotate_with_flows_dense_blocks(graph, 
+          routes, 1.0, overall_sparsity=0.1)
+
+  # static matrix considering origin-destination flows
+  phi, alpha, mu, f, num_routes = generate_static_matrix_OD(graph, routes,
+          sensors, flow_portions_OD, flow_from_each_node=flow_OD)
+  scipy.io.savemat(prefix + 'small_graph_OD_dense.mat', {'phi': phi, 'real_a': alpha, 'w': mu,
+          'f': f, 'block_sizes': num_routes}, oned_as='column')
+          
   
 if __name__ == '__main__':
   import sys

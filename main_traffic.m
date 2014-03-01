@@ -1,12 +1,7 @@
 %% Generate Some Synthetic Data
 clc; clear all
 
-% load('model/data/params-traffic/20140226T002234-cathywu-2.mat');
-% load('model/data/params-traffic/20140226T002235-cathywu-3.mat');
-% load('model/data/params-traffic/20140226T002235-cathywu-4.mat');
-load('model/data/params-traffic/20140226T002236-cathywu-5.mat');
-
-whos
+load('model/data/params-traffic/20140228T232249-cathywu-6.mat');
 
 % Dimensions of the problem
 n = size(p.Phi,2);
@@ -44,9 +39,9 @@ for i=1:lenN
     z_init(k+1:k+N(i)-1) = PAValgo(z_init(k+1:k+N(i)-1),ones(N(i)-1,1),0,1);
     k = k+N(i)-1;
 end
-x_init = zeros(n,1);
 
 % Compute x from z projected onto the feasible set
+x_init = zeros(n,1);
 ind = 1;
 k = 0;
 for i=1:lenN
