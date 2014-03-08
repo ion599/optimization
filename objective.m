@@ -26,8 +26,8 @@ for i=1:p
     ind = ind+1;
 end
 obj = A*u-b;
-temp = A' * obj + alpha*u;
-obj = .5 * ((obj'*obj) + alpha*(u'*u));
+temp = A' * obj + alpha.*u;
+obj = .5 * ((obj'*obj) + alpha'*(u.*u));
 
 ind = 1;
 k = 0;
