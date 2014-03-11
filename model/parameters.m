@@ -107,9 +107,11 @@ matrix_sizes('traffic') = [];
 %     end
 % end
 
-matrix_sizes('traffic') = [2 2 2 2; 2 3 2 2; 3 3 2 2; 3 4 2 2; ...
-                           2 3 3 2; 3 3 3 2; 3 3 3 2; 3 4 3 2];
-    
+% matrix_sizes('traffic') = [2 2 2 2; 2 3 2 2; 3 3 2 2; 3 4 2 2; ...
+%                            2 3 3 2; 3 3 3 2; 3 3 3 2; 3 4 3 2];
+
+matrix_sizes('traffic') = [5 10 3 2; 6 12 3 2; 6 18 3 2; 10 30 3 2];
+
 % each row is one size triple + sparsity measure
 % matrix_sizes = [2 2 2 2; 2 2 2 3; 2 2 2 4; 3 3 2 2; 3 3 2 3; ...
 %    3 3 3 4; 4 4 2 2; 4 4 3 3; 4 4 3 4; 5 5 2 2; 5 5 2 3; 5 5 2 4; 5 5 3 2; 5 5 3 3; 5 5 3 4]; 
