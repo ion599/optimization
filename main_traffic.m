@@ -30,6 +30,7 @@ for i=1:lenN
 end
 z_init = x2z(x_init,N);
 
+%{
 %% Generate x_init2 = x_true + noise
 
 sigma = 0.3; % noise added to x_true
@@ -44,21 +45,24 @@ for i=1:lenN
     k = k+N(i);
 end
 z_init2 = x2z(x_init2,N);
+%}
+%% Generate x_init2,3 = routes by importance
 
-%% Generate x_init3 = routes by importance
-
+x_init2 = zeros(n,1);
 x_init3 = zeros(n,1);
 k=0;
 for i=1:lenN
     [~,id] = sort(x_true(k+1:k+N(i)));
     [~,id2] = sort(id);
-    x_init3(k+1:k+N(i)) = id2/sum(id2);
+    x_init2(k+1:k+N(i)) = id2/sum(id2);
+    x_init3(k+1:k+N(i)) = 10.^(id2-1)/sum(10.^(id2-1));
     k = k+N(i);
 end
+z_init2 = x2z(x_init2,N);
 z_init3 = x2z(x_init3,N);
 
 %% Set up optimization problem
-noise = 0.3; %noise added to b
+noise = 0; %noise added to b
 
 alpha = (100*(noise^2)*(noise>.1))*(1-x_init3);
 b2 = b+normrnd(0,noise,m,1);
@@ -74,18 +78,46 @@ options.corrections = 10; % Number of corrections to store for L-BFGS methods
 
 fprintf('Spectral Projected Gradient\n\n');
 options = gOptions;
-x = z2x(SPG(funObj,z_init,N,options),N);
-x2 = z2x(SPG(funObj,z_init3,N,options),N);
-x3 = z2x(SPG(funObj2,z_init3,N,options),N);
+x1 = z2x(SPG(funObj,z_init,N,options),N);
+x2 = z2x(SPG(funObj,z_init2,N,options),N);
+x3 = z2x(SPG(funObj,z_init3,N,options),N);
+%{
+x12 = z2x(SPG(funObj2,z_init,N,options),N);
+x22 = z2x(SPG(funObj2,z_init2,N,options),N);
+x32 = z2x(SPG(funObj2,z_init3,N,options),N);
+%}
+%% Run ADMM
+
+fprintf('ADMM\n\n');
+x = z2x(ADMM(z_init3,N,A,b,1.5,100),N);
+%testADMM(N,A,b)
 
 %% Display performance
 
+fprintf('\nnoise=%.2f\n\n',noise)
+
+fprintf('\nSPG without l2-regularization with init1,2,3\n\n')
+
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
-    norm(A*x-b), norm(A*x_init-b), max(abs(x-x_true)))
-fprintf('norm(A*x2-b): %8.5e\nnorm(A*x_init2-b): %8.5e\nmax|x2-x_true|: %.2f\n\n\n', ...
-    norm(A*x2-b), norm(A*x_init3-b), max(abs(x2-x_true)))
-fprintf('norm(A*x3-b): %8.5e\nnorm(A*x_init3-b): %8.5e\nmax|x3-x_true|: %.2f\n\n\n', ...
+    norm(A*x1-b), norm(A*x_init-b), max(abs(x1-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*x2-b), norm(A*x_init2-b), max(abs(x2-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
     norm(A*x3-b), norm(A*x_init3-b), max(abs(x3-x_true)))
+%{
+fprintf('\nwith l2-regularization and init1,2,3 and noise=%.2f\n\n',noise)
+
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*x12-b), norm(A*x_init-b), max(abs(x12-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*x22-b), norm(A*x_init2-b), max(abs(x22-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*x32-b), norm(A*x_init3-b), max(abs(x32-x_true)))
+%}
+fprintf('\nADMM without l2-regularization with init1,2,3\n\n');
+
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*x-b), norm(A*x_init3-b), max(abs(x-x_true)))
 
 %% Display results
 %{
