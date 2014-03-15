@@ -4,7 +4,8 @@ clc; clear all
 %load('data/20140228T232249-cathywu-5.mat');
 %load('data/20140228T232250-cathywu-7.mat')
 %load('data/20140228T232250-cathywu-8.mat');
-load('data/20140228T232251-cathywu-9.mat');
+%load('data/20140228T232251-cathywu-9.mat');
+load('data/20140310T213327-cathywu-4.mat')
 
 % Dimensions of the problem
 n = size(p.Phi,2);
@@ -62,41 +63,74 @@ z_init2 = x2z(x_init2,N);
 z_init3 = x2z(x_init3,N);
 
 %% Set up optimization problem
-noise = 0; %noise added to b
+noise = 0.3; %noise added to b
 
 alpha = (100*(noise^2)*(noise>.1))*(1-x_init3);
 b2 = b+normrnd(0,noise,m,1);
 funObj = @(z)objective(z,A,N,b2,zeros(n,1)); % no penalization (L2)
 funObj2 = @(z)objective(z,A,N,b2,alpha);
 
+tau = 1.5;
+[C,d] = preADMM(N,A,b2,zeros(n,1),tau);
+[C2,d2] = preADMM(N,A,b2,alpha,tau);
+
 %% Set Optimization Options
-gOptions.maxIter = 100;
+gOptions.maxIter = 200;
 gOptions.verbose = 0; % Set to 0 to turn off output
 options.corrections = 10; % Number of corrections to store for L-BFGS methods
+maxIter = 200;
 
 %% Run Solver
 
 fprintf('Spectral Projected Gradient\n\n');
 options = gOptions;
+tic
 x1 = z2x(SPG(funObj,z_init,N,options),N);
 x2 = z2x(SPG(funObj,z_init2,N,options),N);
 x3 = z2x(SPG(funObj,z_init3,N,options),N);
-%{
+
 x12 = z2x(SPG(funObj2,z_init,N,options),N);
 x22 = z2x(SPG(funObj2,z_init2,N,options),N);
 x32 = z2x(SPG(funObj2,z_init3,N,options),N);
-%}
+timeSPG = toc;
+
 %% Run ADMM
 
-fprintf('ADMM\n\n');
-x = z2x(ADMM(z_init3,N,A,b,1.5,100),N);
-%testADMM(N,A,b)
+fprintf('ADMM without noise\n\n');
+%testADMM(N,A,b,alpha,1.5)
+tic
+y1 = z2x(ADMM(funObj, z_init, C, d, N, tau, maxIter), N);
+y2 = z2x(ADMM(funObj, z_init2, C, d, N, tau, maxIter), N);
+y3 = z2x(ADMM(funObj, z_init3, C, d, N, tau, maxIter), N);
 
-%% Display performance
+fprintf('ADMM with noise\n\n');
+
+y12 = z2x(ADMM(funObj2, z_init, C2, d2, N, tau, maxIter), N);
+y22 = z2x(ADMM(funObj2, z_init2, C2, d2, N, tau, maxIter), N);
+y32 = z2x(ADMM(funObj2, z_init3, C2, d2, N, tau, maxIter), N);
+timeADMM = toc;
+
+%% Run FADMM
+
+fprintf('FADMM without noise\n\n');
+
+tic
+z1 = z2x(FADMM(funObj, z_init, C, d, N, tau, maxIter), N);
+z2 = z2x(FADMM(funObj, z_init2, C, d, N, tau, maxIter), N);
+z3 = z2x(FADMM(funObj, z_init3, C, d, N, tau, maxIter), N);
+
+fprintf('FADMM with noise\n\n');
+
+z12 = z2x(FADMM(funObj2, z_init, C2, d2, N, tau, maxIter), N);
+z22 = z2x(FADMM(funObj2, z_init2, C2, d2, N, tau, maxIter), N);
+z32 = z2x(FADMM(funObj2, z_init3, C2, d2, N, tau, maxIter), N);
+timeFADMM = toc;
+
+%% Display performance SPG
 
 fprintf('\nnoise=%.2f\n\n',noise)
 
-fprintf('\nSPG without l2-regularization with init1,2,3\n\n')
+fprintf('\nSPG without l2-regularization with init 1,2,3\n\n')
 
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
     norm(A*x1-b), norm(A*x_init-b), max(abs(x1-x_true)))
@@ -104,8 +138,8 @@ fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n'
     norm(A*x2-b), norm(A*x_init2-b), max(abs(x2-x_true)))
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
     norm(A*x3-b), norm(A*x_init3-b), max(abs(x3-x_true)))
-%{
-fprintf('\nwith l2-regularization and init1,2,3 and noise=%.2f\n\n',noise)
+
+fprintf('\nSPG with l2-regularization and init1,2,3\n\n')
 
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
     norm(A*x12-b), norm(A*x_init-b), max(abs(x12-x_true)))
@@ -113,11 +147,47 @@ fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n'
     norm(A*x22-b), norm(A*x_init2-b), max(abs(x22-x_true)))
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
     norm(A*x32-b), norm(A*x_init3-b), max(abs(x32-x_true)))
-%}
-fprintf('\nADMM without l2-regularization with init1,2,3\n\n');
+
+%% Display performance ADMM
+
+fprintf('\nADMM without l2-regularization with init 1,2,3\n\n');
 
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
-    norm(A*x-b), norm(A*x_init3-b), max(abs(x-x_true)))
+    norm(A*y1-b), norm(A*x_init-b), max(abs(y1-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*y2-b), norm(A*x_init2-b), max(abs(y2-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*y3-b), norm(A*x_init3-b), max(abs(y3-x_true)))
+
+fprintf('\nADMM with l2-regularization with init 1,2,3\n\n');
+
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*y12-b), norm(A*x_init-b), max(abs(y12-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*y22-b), norm(A*x_init2-b), max(abs(y22-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*y32-b), norm(A*x_init3-b), max(abs(y32-x_true)))
+
+%% Display performance FADMM
+
+fprintf('\nFADMM without l2-regularization with init 1,2,3\n\n');
+
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*z1-b), norm(A*x_init-b), max(abs(z1-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*z2-b), norm(A*x_init2-b), max(abs(z2-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*z3-b), norm(A*x_init3-b), max(abs(z3-x_true)))
+
+fprintf('\nFADMM with l2-regularization with init 1,2,3\n\n');
+
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*z12-b), norm(A*x_init-b), max(abs(z12-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*z22-b), norm(A*x_init2-b), max(abs(z22-x_true)))
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
+    norm(A*z32-b), norm(A*x_init3-b), max(abs(z32-x_true)))
+
 
 %% Display results
 %{

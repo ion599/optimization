@@ -1,10 +1,8 @@
-function testADMM(N,A,b,alpha,tau)
+function [C,d] = preADMM(N,A,b,alpha,tau)
 
-% check precomputations in implementation of ADMM
 [m,n] = size(A);
 p = length(N);
 
-% Precompute matrices
 AN = zeros(m,n-p);
 Ax0 = zeros(m,1);
 for l=1:m
@@ -35,31 +33,4 @@ for i=1:p
     ind = ind+1;
     k = k+1;
 end
-invC = inv(C);
-
-
-N2 = zeros(n, n-p);
-x0 = zeros(n,1);
-
-ind = 1;
-k = 0;
-for i=1:length(N)
-    N2(ind, ind-k) = 1;
-    ind = ind+1;
-    for j=2:(N(i)-1)
-        N2(ind, ind-k-1) = -1;
-        N2(ind, ind-k) = 1;
-        ind = ind +1;
-    end
-    N2(ind, ind-k-1) = -1;
-    k = k+1;
-    x0(ind) = 1;
-    ind = ind+1;
-end
-N2'*diag(alpha)*N2
-C2 = (A*N2)'*A*N2 + N2'*diag(alpha)*N2 + tau*eye(n-p);
-invC2 = inv(C2);
-d2 = -(A*N2)'*(A*x0-b)-N2'*diag(alpha)*x0;
-
-norm(C-C2)
-norm(d-d2)
+C = inv(C);

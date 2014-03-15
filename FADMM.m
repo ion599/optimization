@@ -1,20 +1,33 @@
-function z = ADMM(funObj,z_init,C,d,N,tau,maxIter)
+function z = FADMM(funObj,z_init,C,d,N,tau,maxIter)
 
 optTol = 1e-5;
 progTol = 1e-9;
 
 % solve min||A(x0+Nz)-b||^2 s.t. x0+Nz>=0 using ADMM
 
-lambda = zeros(length(z_init),1);
-u = z_init;
+lambda_old = zeros(length(z_init),1);
+lambda_hat = lambda_old;
+
+u_old = z_init;
+u_hat = u_old;
+
+alpha = 1;
+
 [f,~] = funObj(z_init);
 for i = 1:maxIter
     % step 1
-    z = C * (d - lambda + tau*u);
+    z = C * (d - lambda_hat + tau*u_hat);
     % step 2
-    u = project(z + lambda/tau,N);
+    u = project(z + lambda_hat/tau,N);
     % step 3
-    lambda = lambda + tau*(z-u);
+    lambda = lambda_hat + tau*(z-u);
+    alpha_old = alpha;
+    alpha = (1+sqrt(1+4*alpha_old^2))/2;
+    u_hat = u + (alpha_old-1)*(u-u_old)/alpha;
+    lambda_hat = lambda + (alpha_old-1)*(lambda-lambda_old)/alpha;
+    lambda_old = lambda;
+    u_old = u;
+    
     f_old = f;
     [f,g] = funObj(z);
     if max(abs(g)) < optTol
