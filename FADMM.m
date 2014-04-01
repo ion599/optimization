@@ -21,6 +21,7 @@ for i = 1:maxIter
     u = project(z + lambda_hat/tau,N);
     % step 3
     lambda = lambda_hat + tau*(z-u);
+    % update parameters
     alpha_old = alpha;
     alpha = (1+sqrt(1+4*alpha_old^2))/2;
     u_hat = u + (alpha_old-1)*(u-u_old)/alpha;
