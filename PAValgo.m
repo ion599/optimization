@@ -11,7 +11,11 @@ Best and Chakravarti. Active Set Algorithms for isotonic regression; a unifying 
 n = length(y);
 x = y;
 
-if n>1
+if n==2
+    if y(1)>y(2)
+        x = (w'*y/sum(w))*ones(2,1);
+    end
+elseif n>2
     J = 1:(n+1); % J contains the first index of each block
     indB = 1;
     %n

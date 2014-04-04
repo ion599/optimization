@@ -58,7 +58,21 @@ eta = 0.999;
 gOptions.maxIter = 200;
 gOptions.verbose = 0; % Set to 0 to turn off output
 options.corrections = 10; % Number of corrections to store for L-BFGS methods
-maxIter = 200;
+maxIter = 20;
+
+%% Run Solver
+
+fprintf('Spectral Projected Gradient\n\n');
+options = gOptions;
+tic
+%x1 = z2x(SPG(funObj,z_init,N,options),N);
+x2 = z2x(SPG(funObj,z_init,N,options),N);
+%x3 = z2x(SPG(funObj,z_init3,N,options),N);
+
+if noise>0
+   x4 = z2x(SPG(funObj2,z_init3,N,options),N);
+end
+timeSPG = toc;
 
 %% Run FADMM with restart
 

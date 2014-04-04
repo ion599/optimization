@@ -8,23 +8,10 @@ N = [n1; n2; ...; np]
 
 n = size(A,2);
 p = length(N);
-u = zeros(n,1);
 g = zeros(n-p,1);
 
 % Compute u=x0+Nz
-ind = 1;
-k = 0;
-for i=1:p
-    u(ind) = z(ind-k); % u = x_0 + Nz
-    ind = ind+1;
-    for j=2:(N(i)-1)
-        u(ind) = z(ind-k)-z(ind-k-1);
-        ind = ind+1;
-    end
-    u(ind) = -z(ind-k-1)+1;
-    k = k+1;
-    ind = ind+1;
-end
+u = z2x(z,N);
 obj = A*u-b;
 temp = A' * obj + alpha.*u;
 obj = .5 * ((obj'*obj) + alpha'*(u.*u));

@@ -14,10 +14,13 @@ c_old = inf;
 
 alpha = 1;
 
-[f,~] = funObj(z_init);
+%[f,~] = funObj(z_init);
 for i = 1:maxIter
     
-    z = C * (d - lambda_hat + tau*u_hat); % step 1
+    fprintf('Iteration: %i\n', i);
+    
+    %z = C * (d - lambda_hat + tau*u_hat); % step 1
+    z = lsqr(C,d - lambda_hat + tau*u_hat);
     u = project(z + lambda_hat/tau,N); % step 2
     lambda = lambda_hat + tau*(z-u); % step 3
     
@@ -37,7 +40,7 @@ for i = 1:maxIter
     c_old = c;
     lambda_old = lambda;
     u_old = u;
-    
+    %{
     f_old = f;
     [f,g] = funObj(z);
     if max(abs(g)) < optTol
@@ -52,6 +55,7 @@ for i = 1:maxIter
         fprintf('Function evaluations reached maxIter\n');
         break;
     end
+    %}
 end
 z = project(z,N);
 
