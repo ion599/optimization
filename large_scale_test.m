@@ -56,7 +56,7 @@ eta = 0.999;
 
 %% Set Optimization Options
 gOptions.maxIter = 200;
-gOptions.verbose = 0; % Set to 0 to turn off output
+gOptions.verbose = 1; % Set to 0 to turn off output
 options.corrections = 10; % Number of corrections to store for L-BFGS methods
 maxIter = 20;
 
@@ -66,8 +66,8 @@ fprintf('Spectral Projected Gradient\n\n');
 options = gOptions;
 tic
 %x1 = z2x(SPG(funObj,z_init,N,options),N);
-x2 = z2x(SPG(funObj,z_init,N,options),N);
-%x3 = z2x(SPG(funObj,z_init3,N,options),N);
+%x2 = z2x(SPG(funObj,z_init2,N,options),N);
+x3 = z2x(SPG(funObj,z_init3,N,options),N);
 
 if noise>0
    x4 = z2x(SPG(funObj2,z_init3,N,options),N);
