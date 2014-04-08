@@ -1,7 +1,7 @@
-function [x,f,g] = lbfgs(funObj,x0,m,maxIter)
+ function [x,f,g] = lbfgs(funObj,x0,m,maxIter,N)
 
-optTol = 1e-9;
-progTol = 1e-10;
+optTol = 1e-5;
+progTol = 1e-9;
 
 stop = 0;
 n = length(x0);
@@ -40,8 +40,8 @@ for i = 1:(m-1)
     sm(:,i+1) = s;
     rhom(i+1) = rho;
     
-    if g'*g < optTol*(1+abs(f))
-        fprintf('First order optimality below optTol, Iter=%i\n', i+2);
+    if max(abs(g)) < optTol
+        fprintf('First-order optimality below optTol, Iter=%i\n', i+2);
         stop = 1;
         break;
     end
@@ -103,4 +103,18 @@ for i=1:(maxIter-m-1)
         break;
     end
     
+end
+
+ end
+
+%% Projection
+
+function x = project(x,N)
+
+k=0;
+for i=1:length(N)
+    x(k+1:k+N(i)-1) = PAValgo(x(k+1:k+N(i)-1),ones(N(i)-1,1),0,1);
+    k = k+N(i)-1;
+end
+
 end
