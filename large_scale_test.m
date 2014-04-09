@@ -45,22 +45,18 @@ z_init3 = x2z(x_init3,N);
 %% Set up optimization problem
 noise = 0; % if b=bExact
 
-funObj = @(z)objective(z,A,N,b,zeros(n,1)); % no penalization (L2)
-%funObj2 = @(z)objective(z,A,N,b,alpha);
-
-fprintf('Pre ADMM step\n\n')
-tau = 1.5;
-%[C,d] = preADMM(N,A,b,zeros(n,1),tau);
-%[C2,d2] = preADMM(N,A,b,alpha,tau);
-eta = 0.999;
+alpha = (100*(noise^2)*(noise>.1))*(1-x_init3);
+b2 = b+normrnd(0,noise,m,1);
+%funObj = @(z)objective(z,A,N,b2,zeros(n,1)); % no penalization (L2)
+funObj = @(z)objective(z,A,N,b2,alpha);
 
 %% Set Optimization Options
-gOptions.maxIter = 500;
+gOptions.maxIter = 1000;
 gOptions.verbose = 1; % Set to 0 to turn off output
 options.corrections = 10; % Number of corrections to store for L-BFGS methods
 maxIter = 20;
 
-%% Run Solver
+%% Run Projected gradient
 
 fprintf('\nProjected Gradient\n\n');
 options = gOptions;
@@ -68,45 +64,25 @@ tic
 x3 = z2x(SPG(funObj,z_init3,N,options),N);
 timeSPG = toc;
 
+%% Run l-BFGS
+
 fprintf('\nl-BFGS\n\n');
 
 tic
-y3 = z2x(lbfgs2(funObj,z_init3,N,5,options),N);
+y3 = z2x(lbfgs2(funObj,z_init3,N,500,options),N);
 timeLBFGS = toc;
 
-if noise>0
-   x4 = z2x(SPG(funObj2,z_init3,N,options),N);
-end
-
-%% Run FADMM with restart
-%{
-fprintf('\nFADMM with restart\n\n');
-
-tic
-%a1 = z2x(FADMM2(funObj, z_init, C, d, N, tau, eta, maxIter), N);
-a2 = z2x(FADMM2(funObj, z_init2, C, d, N, tau, eta, maxIter), N);
-%a3 = z2x(FADMM2(funObj, z_init3, C, d, N, tau, eta, maxIter), N);
-
-if noise>0
-    a4 = z2x(FADMM2(funObj2, z_init3, C2, d2, N, tau, eta, maxIter), N);
-end
-timeFADMM2 = toc;
-%}
 %% Display performance
 
 fprintf('\nProjected gradient without l2-regularization\n\n');
 
-%fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
-%    norm(A*a1-b), norm(A*x_init-b), max(abs(a1-x_true)))
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-    norm(A*x3-b), norm(A*x_init3-b), max(abs(x3-x_true)), max(abs(x3-x_init3)))
-%fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\n\n\n', ...
-%    norm(A*a3-b), norm(A*x_init3-b), max(abs(a3-x_true)))
+    norm(A*x3-b), norm(A*x_init3-b), max(abs(x3-x_true)), max(abs(x_true-x_init3)))
 
 fprintf('\nLBFGS without l2-regularization\n\n');
 
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-    norm(A*y3-b), norm(A*x_init3-b), max(abs(y3-x_true)), max(abs(y3-x_init3)))
+    norm(A*y3-b), norm(A*x_init3-b), max(abs(y3-x_true)), max(abs(x_true-x_init3)))
 
 %% Display results
 %{
