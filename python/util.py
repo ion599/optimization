@@ -62,7 +62,7 @@ def block_sizes_to_N(block_sizes):
 # -----------------------------------------------------------------------------
 
 def is_sparse_matrix(A):
-    return isinstance(B, sps.data._data_matrix)
+    return not sps.sputils.isdense(A)
 
 def load_data(filename):
     data = sio.loadmat(filename)
