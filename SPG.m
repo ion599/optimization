@@ -1,4 +1,6 @@
-function [w] = SPG(funObj,w,N,options)
+function [w, hist] = SPG(funObj,w,N,options)
+
+hist = [];
 
 %% Process Options
 if nargin < 4
@@ -161,6 +163,11 @@ for i = 1:maxIter
         end
         break;
     end
+    
+    if mod(i,100)==0
+        hist = [hist, w(1:n)-w(n+1:end)];
+    end
+    
 end
 w = w(1:n)-w(n+1:end);
 

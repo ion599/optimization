@@ -42,13 +42,37 @@ end
 z_init2 = x2z(x_init2,N);
 z_init3 = x2z(x_init3,N);
 
+%% Compute sparse matrices                                                        
+
+N2 = sparse(n, n-lenN);
+x0 = sparse(n,1);
+
+ind = 1;
+k = 0;
+for i=1:lenN
+    if N(i)>1
+    N2(ind, ind-k) = 1;
+    ind = ind+1;
+    for j=2:(N(i)-1)
+        N2(ind, ind-k-1) = -1;
+        N2(ind, ind-k) = 1;
+        ind = ind+1;
+    end
+    N2(ind, ind-k-1) = -1;
+    end
+    k = k+1;
+    x0(ind) = 1;
+    ind = ind+1;
+end
+
+
 %% Set up optimization problem
 noise = 0.2; % if b=bExact
 
 alpha = (100*(noise^2)*(noise>.1))*(1-x_init2);
 b2 = b+normrnd(0,noise,m,1);
-funObj = @(z)objective(z,A,N,b2,zeros(n,1)); % no penalization (L2)
-funObj2 = @(z)objective(z,A,N,b2,alpha);
+funObj = @(z)objectiveSparse(z,A,N,N2,x0,b2,zeros(n,1)); % no penalization (L2)
+funObj2 = @(z)objectiveSparse(z,A,N,N2,x0,b2,alpha);
 
 %% Set Optimization Options
 gOptions.maxIter = 100;
@@ -63,7 +87,7 @@ fprintf('\nProjected Gradient\n\n');
 options = gOptions;
 tic
 [zSPG,histSPG] = SPG(funObj,z_init3,N,options);
-xSPG = z2x(zSPG,N);
+xSPG = x0+N2*zSPG;
 timeSPG = toc;
 
 %% Run l-BFGS
@@ -72,7 +96,7 @@ fprintf('\nl-BFGS\n\n');
 
 tic
 [zLBFGS,histLBFGS] = lbfgs2(funObj,z_init3,N,500,options);
-xLBFGS = z2x(zLBFGS,N);
+xLBFGS = x0+N2*zLBFGS;
 timeLBFGS = toc;
 
 %% Run noisy case
@@ -84,7 +108,7 @@ if noise>0.1
     options = gOptions;
     tic
     [zSPG2,histSPG2] = SPG(funObj2,z_init3,N,options);
-    xSPG2 = z2x(zSPG2,N);
+    xSPG2 = x0+N2*zSPG2;
     timeSPG2 = toc;
     
     % Run l-BFGS with reg.
@@ -93,7 +117,7 @@ if noise>0.1
     
     tic
     [zLBFGS2,histLBFGS2] = lbfgs2(funObj2,z_init3,N,500,options);
-    xLBFGS2 = z2x(zLBFGS2,N);
+    xLBFGS2 = x0+N2*zLBFGS2;
     timeLBFGS2 = toc;
 end
 

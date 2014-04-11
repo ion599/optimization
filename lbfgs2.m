@@ -1,4 +1,6 @@
-function [w] = lbfgs2(funObj,w,N,m,options)
+function [w, hist] = lbfgs2(funObj,w,N,m,options)
+
+hist = [];
 
 %% Process Options
 if nargin < 4
@@ -186,6 +188,11 @@ for i = 1:maxIter
         end
         break;
     end
+    
+    if mod(i,100)==0
+        hist = [hist, w(1:n)-w(n+1:end)];
+    end
+    
 end
 
 w = [w.*(w>0);-w.*(w<0)];
