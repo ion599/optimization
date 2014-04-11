@@ -1,6 +1,10 @@
 import numpy as np
 from math import isnan
 import scipy.sparse as sps
+import proj_PAV
+import numpy.linalg as la
+import scipy.sparse.linalg as sla
+import logging
 
 def spg_line(f, x, d, gtd, f_max, objective):
     max_iterations = 10
@@ -23,19 +27,25 @@ def spg_line(f, x, d, gtd, f_max, objective):
             if tmp < 0.1 or tmp > 0.9*step or isnan(tmp):
                 tmp = step / 2.
             step = tmp
+    return f_new, x_new, step, n_obj
 
-def solver(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None,
+def solver(AN, q, G=None, h=None, A=None, b=None, solver=None, initvals=None,
            N=None, block_sizes=None, reduction=None, constraints=None):
-    # TODO: set projection, objective based on QP
+    x = np.zeros(q.shape[0])
+    logging.debug('|q| = %s' % la.norm(q))
+
     def projection(x):
-        pass
+        return proj_PAV.simplex_projection(block_sizes - 1, x)
 
     def objective(x):
-        """Computes objective and gradient of objectvie at x
+        """Computes objective and gradient of objective at x
 
         returns tuple (f, g) where f=obj(x) and g = grad_x obj(x)
         """
-        pass
+        Ax = AN.dot(x)
+        f = x.dot(q) + (Ax.dot(Ax)/2.)
+        g = AN.T.dot(AN.dot(x)) + q
+        return (f, g)
 
     m = 1
     tolerance = 10**-7
@@ -58,15 +68,17 @@ def solver(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None,
     f, g = objective(x)
     n_obj += 1
     n_grd += 1
-    last_function_value = f;
+    last_m_function_values[0] = f;
+    last_m_function_values = np.roll(last_m_function_values, -1)
     best_f = f
     best_x = x
-    function_hist[0] = f
-    eval_history[0] = b_obj
+    function_history[0] = f
+    eval_history[0] = n_obj
     d = projection(x - g) - x
     d_norm = la.norm(d, np.inf)
     g_step = min(max_step_length, max(min_step_length, 1./d_norm))
     for iter_index in xrange(max_iterations):
+        logging.info('Running iteration %d of SPG' % iter_index)
         if d_norm < tolerance or n_obj >= max_fn_evals:
             break
 
@@ -74,7 +86,7 @@ def solver(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None,
         d = projection(x - g_step*g) - x
         gtd = g.dot(g)
 
-        f_new, x_new, l_step, ln_obj = spg_line(f, x, d, gtd, max(last_m_function_values), objective)
+        f_new, x_new, l_step, ln_obj = spg_line(f, x, d, gtd, last_m_function_values[0], objective)
 
         if best_f < f_new:
             best_f = f_new
@@ -90,6 +102,8 @@ def solver(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None,
         x = x_new
         g = g_new
         f = f_new
+        last_m_function_values[0] = f;
+        last_m_function_values = np.roll(last_m_function_values, -1)
 
         d = projection(x - g) - x
         d_norm = la.norm(d, np.inf)
@@ -106,3 +120,5 @@ def solver(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None,
         f, g = objective(x)
         n_obj += 1
         n_grd += 1
+
+    return x

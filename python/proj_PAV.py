@@ -2,10 +2,16 @@ from __future__ import division
 from numpy import array, inf, dot, ones, float
 import numpy as np
 import time
-# PAV algorithm with box constraints
-def proj_PAV(y, w, l=-inf, u=inf):
 
-    assert(y.size == w.size)
+def proj_PAV(y, w, l=-inf, u=inf):
+    """PAV algorithm with box constraints
+    """
+
+    if y.size != w.size:
+        print y
+        print w
+        raise Exception("Shape of y (%s) != shape of w (%d)" % (y.size, w.size))
+
     n = len(y)
     y = y.astype(float)
     x=y.copy()
@@ -30,9 +36,16 @@ def proj_PAV(y, w, l=-inf, u=inf):
         for i in xrange(len(j)-1):
             x[j[i]:j[i+1]] = weighted_block_avg(y,w,j,i)*ones(j[i+1]-j[i])
 
-    x[x<l] = l
-    x[x>u] = u
+    x[np.where(x < l)] = l
+    x[np.where(x > u)] = u
 
+    return x
+
+def simplex_projection(block_sizes, x):
+    k = 0
+    for i, block_size in enumerate(block_sizes):
+        x[k:k+block_size] = proj_PAV(x[k:k+block_size],np.ones(block_size),0,1)
+        k += block_size
     return x
 
 # weighted average
@@ -58,10 +71,7 @@ Demonstration of the PAV algorithm on a small example."""
     w = array([i%5 for i in range(60000)])
     print w[range(20)]
     start = time.clock()
-    k = 0
-    for i in range(30000):
-        w[k:k+N[i]-1] = proj_PAV(w[k:k+N[i]-1],ones(N[i]-1),1,4)
-        k = k+N[i]-1
+    w = simplex_projection(w, N - 1)
     print (time.clock() - start)
     print w[range(20)]
 
