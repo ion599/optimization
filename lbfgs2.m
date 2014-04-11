@@ -1,4 +1,4 @@
-function [w, hist] = lbfgs2(funObj,w,N,m,options)
+function [w, hist] = lbfgs2(funObj,funProj,w,options)
 
 hist = [];
 
@@ -7,9 +7,9 @@ if nargin < 4
     options = [];
 end
 
-[verbose,optTol,progTol,maxIter,suffDec,memory] = ...
+[verbose,optTol,progTol,maxIter,suffDec,memory,corrections] = ...
     myProcessOptions(options,'verbose',1,'optTol',1e-5,'progTol',1e-9,...
-    'maxIter',1000,'suffDec',1e-4,'memory',10);
+    'maxIter',1000,'suffDec',1e-4,'memory',10,'corrections',100);
 
 if verbose
     fprintf('%6s %6s %12s %12s %12s %6s\n','Iter','fEvals','stepLen','fVal','optCond','nnz');
@@ -34,9 +34,9 @@ end
 
 %% Initialize history sets
 
-ym = zeros(n,m);
-sm = zeros(n,m);
-rhom = zeros(1,m);
+ym = zeros(n,corrections);
+sm = zeros(n,corrections);
+rhom = zeros(1,corrections);
 
 %% Main loop of SPG
 for i = 1:maxIter
@@ -56,7 +56,7 @@ for i = 1:maxIter
             pause;
         end
         
-        if i <= m+1
+        if i <= corrections+1
             
             ym(:,i-1) = y(1:n);
             sm(:,i-1) = s(1:n)-s(n+1:end);
@@ -71,7 +71,7 @@ for i = 1:maxIter
             ym = [ym y(1:n)];
             sm = [sm s(1:n)-s(n+1:end)];
             rhom = [rhom (y(1:n)'*(s(1:n)-s(n+1:end)))^-1];
-            d = lbfgs(y(1:n), s(1:n)-s(n+1:end), g(1:n), ym, sm, rhom, m);
+            d = lbfgs(y(1:n), s(1:n)-s(n+1:end), g(1:n), ym, sm, rhom, corrections);
             d = [d;-d];
             
         end
@@ -99,7 +99,7 @@ for i = 1:maxIter
     end
     
     % Compute projected point
-    w_new = project(w+t*d,n,N);
+    w_new = project(funProj,w+t*d,n);
     [f_new,g_new] = nonNegGrad(funObj,w_new,n);
     funEvals = funEvals+1;
     
@@ -146,7 +146,7 @@ for i = 1:maxIter
         end
         
         % Compute projected point
-        w_new = project(w+t*d,n,N);
+        w_new = project(funProj,w+t*d,n);
         [f_new,g_new] = nonNegGrad(funObj,w_new,n);
         funEvals = funEvals+1;
     end
@@ -195,26 +195,17 @@ for i = 1:maxIter
     
 end
 
-w = [w.*(w>0);-w.*(w<0)];
+w = w(1:n)-w(n+1:end);
 
 end
 
 %% Non-negative variable gradient calculation
-function [f,g,H] = nonNegGrad(funObj,w,n)
-
+function [f,g] = nonNegGrad(funObj,w,n)
 [f,g] = funObj(w(1:n)-w(n+1:end));
-
 g = [g;-g];
 end
 
-function [w] = project(w,n,N)
-w = w(1:n)-w(n+1:end);
-
-k=0;
-for i=1:length(N)
-    w(k+1:k+N(i)-1) = PAValgo(w(k+1:k+N(i)-1),ones(N(i)-1,1),0,1);
-    k = k+N(i)-1;
-end
-
+function [w] = project(funProj,w,n)
+w = funProj(w(1:n)-w(n+1:end));
 w = [w.*(w>0);-w.*(w<0)];
 end
