@@ -84,7 +84,7 @@ def solver(AN, q, G=None, h=None, A=None, b=None, solver=None, initvals=None,
 
         # Right now, I am ignoring curvyFlag (i.e. setting it to false)
         d = projection(x - g_step*g) - x
-        gtd = g.dot(g)
+        gtd = g.dot(d)
 
         f_new, x_new, l_step, ln_obj = spg_line(f, x, d, gtd, last_m_function_values[0], objective)
 
@@ -102,11 +102,13 @@ def solver(AN, q, G=None, h=None, A=None, b=None, solver=None, initvals=None,
         x = x_new
         g = g_new
         f = f_new
+        logging.info('Function value on iteration %d: %s' % (iter_index, f))
         last_m_function_values[0] = f;
         last_m_function_values = np.roll(last_m_function_values, -1)
 
         d = projection(x - g) - x
         d_norm = la.norm(d, np.inf)
+        logging.debug('d_norm = %s' % d_norm)
 
         sts = s.dot(s)
         sty = s.dot(y)
