@@ -68,7 +68,7 @@ end
 %% COnstruct objectives
 
 funObj = @(z)objective(z,A,N,b,zeros(n,1)); % no penalization (L2)
-funObj2 = @(z)objectiveSparse(z,A,N,N2,x0,b,zeros(n,1));
+funObj2 = @(z)objectiveSparse(z,A,N2,x0,b,zeros(n,1));
 
 %%
 
