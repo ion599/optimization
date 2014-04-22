@@ -28,7 +28,7 @@ end
 
 % models = {'small_graph_random', 'small_graph_OD', 'small_graph', ...
 %           'small_graph_OD_dense'};
-models = {'small_graph_OD_dense'};
+models = {'small_graph_OD'};
 
 date = datestr(now, 30);
 
