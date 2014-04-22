@@ -13,7 +13,9 @@ for i=1:lenN
         for j=1:(N(i)-2)
             z(ind) = x(ind+k) + z(ind-1);
             ind = ind+1;
-        end
+        end 
     end
+    %z(ind:ind+N(i)-2) = cumsum(x(ind+k:ind+N(i)-2+k));
+    %ind = ind+N(i)-1;
     k = k+1;
 end
