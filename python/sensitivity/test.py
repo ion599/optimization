@@ -56,13 +56,15 @@ def perturb_one_block_conserve():
     (dx,res,rank,s) = la.lstsq(A + dA,-dA.dot(x_true))
     return (dx,res)
 
-print 'Epsilon = \t\t\t%f' % (epsilon)
-(dx,res) = trials(1000,perturb_one_entry)
-print "Perturbing 1 entry: \t\t||dx|| = %f, res = %f, rel = %f" % \
-        (dx, res, dx/epsilon)
-(dx,res) = trials(1000,perturb_one_block)
-print "Perturbing 1 block: \t\t||dx|| = %f, res = %f, rel = %f" % \
-        (dx, res, dx/epsilon)
-(dx,res) = trials(1000,perturb_one_block_conserve)
-print "Perturbing 1 block conserve: \t||dx|| = %f, res = %f, rel = %f" % \
-        (dx, res, dx/epsilon)
+epsilons = [0.05,0.01,0.005,0.001]
+for epsilon in epsilons:
+    print 'Epsilon = \t\t\t%f' % (epsilon)
+    (dx,res) = trials(1000,perturb_one_entry)
+    print "Perturbing 1 entry: \t\t||dx|| = %f, res = %f, rel = %f" % \
+            (dx, res, dx/epsilon)
+    (dx,res) = trials(1000,perturb_one_block)
+    print "Perturbing 1 block: \t\t||dx|| = %f, res = %f, rel = %f" % \
+            (dx, res, dx/epsilon)
+    (dx,res) = trials(1000,perturb_one_block_conserve)
+    print "Perturbing 1 block conserve: \t||dx|| = %f, res = %f, rel = %f" % \
+            (dx, res, dx/epsilon)
