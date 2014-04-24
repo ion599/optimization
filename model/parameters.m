@@ -4,7 +4,7 @@ repeat = 1;
 cvx_solver mosek;
 
 user = getenv('USER');
-addpath 'lbfgsb-matlab/src';
+% addpath 'lbfgsb-matlab/src';
 if strcmp(user,'cathywu') == 1
     python = '/usr/local/bin/python';
     base_directory = './data/';
@@ -110,7 +110,7 @@ matrix_sizes('traffic') = [];
 % matrix_sizes('traffic') = [2 2 2 2; 2 3 2 2; 3 3 2 2; 3 4 2 2; ...
 %                            2 3 3 2; 3 3 3 2; 3 3 3 2; 3 4 3 2];
 
-matrix_sizes('traffic') = [4 6 3 2];
+matrix_sizes('traffic') = [6 18 3 1; 6 12 3 1; 5 10 3 1; 3 4 3 1; 3 3 3 1];
 
 % each row is one size triple + sparsity measure
 % matrix_sizes = [2 2 2 2; 2 2 2 3; 2 2 2 4; 3 3 2 2; 3 3 2 3; ...
