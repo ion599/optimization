@@ -65,6 +65,12 @@ tic
 [zSPG,histSPG] = SPG(funObj,funProj,init,options);
 timeSPG = toc;
 
+fprintf('\Double Over-relaxation\n\n');
+options = gOptions;
+tic
+[zDORE,histDORE] = DORE(funObj,funProj,A,b2,init,options);
+timeDORE = toc;
+
 fprintf('\nl-BFGS\n\n');
 
 tic
@@ -74,59 +80,64 @@ timeLBFGS = toc;
 if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
     xSPG = x0+N2*zSPG; xLBFGS = x0+N2*zLBFGS;
 else
-    xSPG = zSPG; xLBFGS = zLBFGS;
+    xSPG = zSPG; xLBFGS = zLBFGS; xDORE = zDORE;
 end
 %% Run noisy case
 
-if noise>0.1
-    % Run Projected gradient with reg.
-  
-    fprintf('\nProjected Gradient\n\n');
-    options = gOptions;
-    tic
-    [zSPG2,histSPG2] = SPG(funObj2,funProj,init,options);
-    timeSPG2 = toc;
-        
-    % Run l-BFGS with reg.
-    
-    fprintf('\nl-BFGS\n\n');
-    
-    tic
-    [zLBFGS2,histLBFGS2] = lbfgs2(funObj2,funProj,init,options);
-    timeLBFGS2 = toc;
-    
-    if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
-        xSPG2 = x0+N2*zSPG2; xLBFGS2 = x0+N2*zLBFGS2;
-    else
-        xSPG2 = zSPG2; xLBFGS2 = zLBFGS2;
-    end
-end
+% if noise>0.1
+%     % Run Projected gradient with reg.
+%   
+%     fprintf('\nProjected Gradient\n\n');
+%     options = gOptions;
+%     tic
+%     [zSPG2,histSPG2] = SPG(funObj2,funProj,init,options);
+%     timeSPG2 = toc;
+%         
+%     % Run l-BFGS with reg.
+%     
+%     fprintf('\nl-BFGS\n\n');
+%     
+%     tic
+%     [zLBFGS2,histLBFGS2] = lbfgs2(funObj2,funProj,init,options);
+%     timeLBFGS2 = toc;
+%     
+%     if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
+%         xSPG2 = x0+N2*zSPG2; xLBFGS2 = x0+N2*zLBFGS2;
+%     else
+%         xSPG2 = zSPG2; xLBFGS2 = zLBFGS2;
+%     end
+% end
 
 %% Display performance
 
 fprintf('\nProjected gradient without l2-regularization\n\n');
-
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-    norm(A*xSPG-b), norm(A*x_init3-b), max(abs(xSPG-x_true)), max(abs(x_true-x_init3)))
+    norm(s*A*xSPG/0.99-b), norm(s*A*x_init3/0.99-b), max(abs(xSPG-x_true)), max(abs(x_true-x_init3)))
+fprintf(strcat('SPG (',sprintf('%.2f',timeSPG/60),' min)'));
+
+fprintf('\Double over-relaxation without l2-regularization\n\n');
+fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
+    norm(s*A*xDORE/0.99-b), norm(s*A*x_init3/0.99-b), max(abs(xDORE-x_true)), max(abs(x_true-x_init3)))
+fprintf(strcat('DORE (',sprintf('%.2f',timeDORE/60),' min)'));
 
 fprintf('\nLBFGS without l2-regularization\n\n');
-
 fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-    norm(A*xLBFGS-b), norm(A*x_init3-b), max(abs(xLBFGS-x_true)), max(abs(x_true-x_init3)))
+    norm(s*A*xLBFGS/0.99-b), norm(s*A*x_init3/0.99-b), max(abs(xLBFGS-x_true)), max(abs(x_true-x_init3)))
+fprintf(strcat('LBFGS (',sprintf('%.2f',timeLBFGS/60),' min)'));
 
-if noise > 0.1
-    
-    fprintf('\nProjected gradient with l2-regularization\n\n');
-    
-    fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-        norm(A*xSPG2-b), norm(A*x_init3-b), max(abs(xSPG2-x_true)), max(abs(x_true-x_init3)))
-    
-    fprintf('\nLBFGS with l2-regularization\n\n');
-    
-    fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-        norm(A*xLBFGS2-b), norm(A*x_init3-b), max(abs(xLBFGS2-x_true)), max(abs(x_true-x_init3)))
-    
-end
+% if noise > 0.1
+%     
+%     fprintf('\nProjected gradient with l2-regularization\n\n');
+%     
+%     fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
+%         norm(A*xSPG2-b), norm(A*x_init3-b), max(abs(xSPG2-x_true)), max(abs(x_true-x_init3)))
+%     
+%     fprintf('\nLBFGS with l2-regularization\n\n');
+%     
+%     fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
+%         norm(A*xLBFGS2-b), norm(A*x_init3-b), max(abs(xLBFGS2-x_true)), max(abs(x_true-x_init3)))
+%     
+% end
 
 %% Display results
 %{
@@ -169,8 +180,8 @@ end
 
 s1 = strcat('LBFGS (',sprintf('%.2f',timeLBFGS/60),' min)');
 s2 = strcat('SPG (',sprintf('%.2f',timeSPG/60),' min)');
-s3 = strcat('LBFGS reg (',sprintf('%.2f',timeLBFGS2/60),' min)');
-s4 = strcat('SPG reg (',sprintf('%.2f',timeSPG2/60),' min)');
+% s3 = strcat('LBFGS reg (',sprintf('%.2f',timeLBFGS2/60),' min)');
+% s4 = strcat('SPG reg (',sprintf('%.2f',timeSPG2/60),' min)');
 
 figure;
 

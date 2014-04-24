@@ -12,7 +12,7 @@ end
     'maxIter',1000,'suffDec',1e-4,'memory',10);
 
 if verbose
-    fprintf('%6s %6s %12s %12s %12s %6s\n','Iter','fEvals','stepLen','fVal','optCond','nnz');
+    fprintf('%6s %6s %12s %12s %12s %6s %6s\n','Iter','fEvals','stepLen','fVal','optCond','nnz','g_norm');
 end
 
 %% Evaluate Initial Point
@@ -136,7 +136,7 @@ for i = 1:maxIter
     
     % Output Log
     if verbose
-        fprintf('%6d %6d %8.5e %8.5e %8.5e %6d\n',i,funEvals,t,f,max(abs(g(W))),nnz(w(1:n)-w(n+1:end)));
+        fprintf('%6d %6d %8.5e %8.5e %8.5e %6d %6d\n',i,funEvals,t,f,max(abs(g(W))),nnz(w(1:n)-w(n+1:end)), norm(g,2));
     end
     
     % Check Optimality
