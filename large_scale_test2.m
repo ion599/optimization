@@ -75,13 +75,13 @@ options = gOptions;
 
 fprintf('\nProjected Gradient\n\n');
 tic; t = cputime;
-[zSPG,histSPG] = SPG(funObj,funProj,init,options);
+[zSPG,histSPG,timeSPG] = SPG(funObj,funProj,init,options);
 timeSPG = toc; timeSPGCPU = cputime - t;
 
 fprintf('\nl-BFGS\n\n');
 
 tic; t = cputime;
-[zLBFGS,histLBFGS] = lbfgs2(funObj,funProj,init,options);
+[zLBFGS,histLBFGS,timeLBFGS] = lbfgs2(funObj,funProj,init,options);
 timeLBFGS = toc; timeLBFGSCPU = cputime - t;
 
 if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
