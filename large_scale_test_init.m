@@ -69,22 +69,22 @@ options = gOptions;
 fprintf('\nl-BFGS\n\n');
 tic; t = cputime;
 init = z_init1;
-[zLBFGS1,histLBFGS1,timeLBFGS1] = lbfgs2(funObj,funProj,init,options);
+[zLBFGS1,histLBFGS1,timesLBFGS1] = lbfgs2(funObj,funProj,init,options);
 timeLBFGS1 = toc; timeLBFGSCPU1 = cputime - t;
 
 tic; t = cputime;
 init = z_init2;
-[zLBFGS2,histLBFGS2,timeLBFGS2] = lbfgs2(funObj,funProj,init,options);
+[zLBFGS2,histLBFGS2,timesLBFGS2] = lbfgs2(funObj,funProj,init,options);
 timeLBFGS2 = toc; timeLBFGSCPU2 = cputime - t;
 
 tic; t = cputime;
 init = z_init3;
-[zLBFGS3,histLBFGS3,timeLBFGS3] = lbfgs2(funObj,funProj,init,options);
+[zLBFGS3,histLBFGS3,timesLBFGS3] = lbfgs2(funObj,funProj,init,options);
 timeLBFGS3 = toc; timeLBFGSCPU3 = cputime - t;
 
 tic; t = cputime;
 init = z_init4;
-[zLBFGS4,histLBFGS4,timeLBFGS4] = lbfgs2(funObj,funProj,init,options);
+[zLBFGS4,histLBFGS4,timesLBFGS4] = lbfgs2(funObj,funProj,init,options);
 timeLBFGS4 = toc; timeLBFGSCPU4 = cputime - t;
 
 if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
@@ -105,22 +105,22 @@ if noise>0.1
     fprintf('\nl-BFGS\n\n');
     tic; t = cputime;
     init = z_init1;
-    [zLBFGS1R,histLBFGS1R,timeLBFGS1R] = lbfgs2(funObj2,funProj,init,options);
+    [zLBFGS1R,histLBFGS1R,timesLBFGS1R] = lbfgs2(funObj2,funProj,init,options);
     timeLBFGS1R = toc; timeLBFGSCPU1R = cputime - t;
 
     tic; t = cputime;
     init = z_init2;
-    [zLBFGS2R,histLBFGS2R,timeLBFGS2R] = lbfgs2(funObj2,funProj,init,options);
+    [zLBFGS2R,histLBFGS2R,timesLBFGS2R] = lbfgs2(funObj2,funProj,init,options);
     timeLBFGS2R = toc; timeLBFGSCPU2R = cputime - t;
 
     tic; t = cputime;
     init = z_init3;
-    [zLBFGS3R,histLBFGS3R,timeLBFGS3R] = lbfgs2(funObj2,funProj,init,options);
+    [zLBFGS3R,histLBFGS3R,timesLBFGS3R] = lbfgs2(funObj2,funProj,init,options);
     timeLBFGS3R = toc; timeLBFGSCPU3R = cputime - t;
 
     tic; t = cputime;
     init = z_init4;
-    [zLBFGS4R,histLBFGS4R,timeLBFGS4R] = lbfgs2(funObj2,funProj,init,options);
+    [zLBFGS4R,histLBFGS4R,timesLBFGS4R] = lbfgs2(funObj2,funProj,init,options);
     timeLBFGS4R = toc; timeLBFGSCPU4R = cputime - t;
 
     if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
@@ -202,80 +202,101 @@ for i=1:lenN
     k = k+N(i);
 end
 
-[fLBFGS,deltaLBFGS,delta2LBFGS] = computeHist(test,x0,N2,histLBFGS,...
+[fLBFGS1,deltaLBFGS1,delta2LBFGS1] = computeHist(test,x0,N2,histLBFGS1,...
     x_true,N,f,A,b);
-[fSPG,deltaSPG,delta2SPG] = computeHist(test,x0,N2,histSPG,x_true,N,f,A,b);
+[fLBFGS2,deltaLBFGS2,delta2LBFGS2] = computeHist(test,x0,N2,histLBFGS2,...
+    x_true,N,f,A,b);
+[fLBFGS3,deltaLBFGS3,delta2LBFGS3] = computeHist(test,x0,N2,histLBFGS3,...
+    x_true,N,f,A,b);
+[fLBFGS4,deltaLBFGS4,delta2LBFGS4] = computeHist(test,x0,N2,histLBFGS4,...
+    x_true,N,f,A,b);
 if noise > 0.1
-    [fLBFGS2,deltaLBFGS2,delta2LBFGS2] = computeHist(test,x0,N2,...
-        histLBFGS2,x_true,N,f,A,b);
-    [fSPG2,deltaSPG2,delta2SPG2] = computeHist(test,x0,N2,histSPG2,...
-        x_true,N,f,A,b);
+    [fLBFGS1R,deltaLBFGS1R,delta2LBFGS1R] = computeHist(test,x0,N2,...
+        histLBFGS1R,x_true,N,f,A,b);
+    [fLBFGS2R,deltaLBFGS2R,delta2LBFGS2R] = computeHist(test,x0,N2,...
+        histLBFGS2R,x_true,N,f,A,b);
+    [fLBFGS3R,deltaLBFGS3R,delta2LBFGS3R] = computeHist(test,x0,N2,...
+        histLBFGS3R,x_true,N,f,A,b);
+    [fLBFGS4R,deltaLBFGS4R,delta2LBFGS4R] = computeHist(test,x0,N2,...
+        histLBFGS4R,x_true,N,f,A,b);
 end
 
 %% display results
 
-% s1 = strcat('LBFGS (',sprintf('%.2f',timeLBFGS/60),' min)');
-% s2 = strcat('SPG (',sprintf('%.2f',timeSPG/60),' min)');
-s1 = strcat('LBFGS (',sprintf('%.2f',timeLBFGSCPU/60),' min)');
-s2 = strcat('SPG (',sprintf('%.2f',timeSPGCPU/60),' min)');
+s1 = strcat('LBFGS rand (',sprintf('%.2f',timeLBFGSCPU1/60),' min)');
+s2 = strcat('LBFGS popular (',sprintf('%.2f',timeLBFGSCPU2/60),' min)');
+s3 = strcat('LBFGS 10^pop (',sprintf('%.2f',timeLBFGSCPU3/60),' min)');
+s4 = strcat('LBFGS uniform (',sprintf('%.2f',timeLBFGSCPU4/60),' min)');
 if noise>0.1
-%     s3 = strcat('LBFGS reg (',sprintf('%.2f',timeLBFGS2/60),' min)');
-%     s4 = strcat('SPG reg (',sprintf('%.2f',timeSPG2/60),' min)');
-    s3 = strcat('LBFGS reg (',sprintf('%.2f',timeLBFGS2CPU/60),' min)');
-    s4 = strcat('SPG reg (',sprintf('%.2f',timeSPG2CPU/60),' min)');
+    s5 = strcat('LBFGS rand reg (',sprintf('%.2f',timeLBFGSCPU1R/60),' min)');
+    s6 = strcat('LBFGS pop reg (',sprintf('%.2f',timeLBFGSCPU2R/60),' min)');
+    s7 = strcat('LBFGS 10^pop reg (',sprintf('%.2f',timeLBFGSCPU3R/60),' min)');
+    s8 = strcat('LBFGS uniform reg (',sprintf('%.2f',timeLBFGSCPU4R/60),' min)');
 end
 figure;
 
-plot(100*[1:length(fLBFGS)],fLBFGS)
+plot(100*[1:length(fLBFGS1)],fLBFGS1,'b')
 title('Objective value vs. Iteration');
 xlabel('Iterations');
 ylabel('f value');
 hold on
-plot(100*[1:length(fSPG)],fSPG,'r')
+plot(100*[1:length(fLBFGS2)],fLBFGS2,'r')
+plot(100*[1:length(fLBFGS3)],fLBFGS3,'g')
+plot(100*[1:length(fLBFGS4)],fLBFGS4,'k')
 if noise > 0.1
     hold on
-    plot(100*[1:length(fLBFGS2)],fLBFGS2,'k')
+    plot(100*[1:length(fLBFGS1R)],fLBFGS1R,'b--')
     hold on
-    plot(100*[1:length(fSPG2)],fSPG2,'g')
-    legend(s1,s2,s3,s4)
+    plot(100*[1:length(fLBFGS2R)],fLBFGS2R,'r--')
+    plot(100*[1:length(fLBFGS3R)],fLBFGS3R,'g--')
+    plot(100*[1:length(fLBFGS4R)],fLBFGS4R,'k--')
+    legend(s1,s2,s3,s4,s5,s6,s7,s8)
 else
-    legend(s1,s2)
+    legend(s1,s2,s3,s4)
 end
 
 figure;
 
-plot(100*[1:length(fLBFGS)],deltaLBFGS)
+plot(100*[1:length(fLBFGS1)],deltaLBFGS1,'b')
 title('|x-xtrue| vs. Iteration');
 xlabel('Iterations');
 ylabel('norm');
 hold on
-plot(100*[1:length(fSPG)],deltaSPG,'r')
+plot(100*[1:length(fLBFGS2)],deltaLBFGS2,'r')
+plot(100*[1:length(fLBFGS3)],deltaLBFGS3,'g')
+plot(100*[1:length(fLBFGS4)],deltaLBFGS4,'k')
 if noise > 0.1
     hold on
-    plot(100*[1:length(fLBFGS2)],deltaLBFGS2,'k')
+    plot(100*[1:length(fLBFGS1R)],deltaLBFGS1R,'b--')
     hold on
-    plot(100*[1:length(fSPG2)],deltaSPG2,'g')
-    legend(s1,s2,s3,s4)
+    plot(100*[1:length(fLBFGS2R)],deltaLBFGS2R,'r--')
+    plot(100*[1:length(fLBFGS3R)],deltaLBFGS3R,'g--')
+    plot(100*[1:length(fLBFGS4R)],deltaLBFGS4R,'k--')
+    legend(s1,s2,s3,s4,s5,s6,s7,s8)
 else
-    legend(s1,s2)
+    legend(s1,s2,s3,s4)
 end
 
 figure;
 
-plot(100*[1:length(fLBFGS)],delta2LBFGS)
+plot(100*[1:length(fLBFGS1)],delta2LBFGS1,'b')
 title('f*|x-xtrue| vs. Iteration');
 xlabel('Iterations');
 ylabel('norm');
 hold on
-plot(100*[1:length(fSPG)],delta2SPG,'r')
+plot(100*[1:length(fLBFGS2)],delta2LBFGS2,'r')
+plot(100*[1:length(fLBFGS3)],delta2LBFGS3,'g')
+plot(100*[1:length(fLBFGS4)],delta2LBFGS4,'k')
 if noise > 0.1
     hold on
-    plot(100*[1:length(fLBFGS2)],delta2LBFGS2,'k')
+    plot(100*[1:length(fLBFGS1R)],delta2LBFGS1R,'b--')
     hold on
-    plot(100*[1:length(fSPG2)],delta2SPG2,'g')
-    legend(s1,s2,s3,s4)
+    plot(100*[1:length(fLBFGS2R)],delta2LBFGS2R,'r--')
+    plot(100*[1:length(fLBFGS3R)],delta2LBFGS3R,'g--')
+    plot(100*[1:length(fLBFGS4R)],delta2LBFGS4R,'k--')
+    legend(s1,s2,s3,s4,s5,s6,s7,s8)
 else
-    legend(s1,s2)
+    legend(s1,s2,s3,s4)
 end
 
 %%
