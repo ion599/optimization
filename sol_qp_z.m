@@ -51,7 +51,7 @@ fprintf('=====================================================\n');
 
 Prob = qpAssign(F, c, a, b_L, b_U, [], [], z_0, 'QPRouteSplit');
 % See Table 49 in TOMLAB_SOL.pdf for optPar parameters
-Prob.SOL.optPar(30)   = 10;     % Setting maximum number of iterations
+Prob.SOL.optPar(30)   = 1000;     % Setting maximum number of iterations
 Prob.SOL.optPar(5)    = 1;     % Setting print frequency
 Prob.SOL.optPar(6)    = 1;     % Setting summary frequency
 Prob.SOL.optPar(12)   = 1000;    % Setting optimality tolerance

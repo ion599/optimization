@@ -49,7 +49,7 @@ Results.Result = [];
 
 %% Solve the first time
 
-step = 10;
+step = 100;
 
 format compact
 fprintf('=====================================================\n');
@@ -71,6 +71,7 @@ Prob.SOL.SummFile =  'QPRouteSplit-summary.txt';
 Prob.PriLevOpt = 2;
 
 Result = tomRun('qp-minos',Prob);
+
 x_k = x0+N2*Result.x_k;
 PrintResult(Result);
 cost = norm(A * x_k - b);
@@ -78,7 +79,9 @@ fprintf('norm(Ax-b): %s\n', cost)
 
 Results.cost = [Results.cost cost];
 Results.x = [Results.x x_k];
-Results.Result = [Results.Result Result];
+newResult = rmfield(Result,'QP');
+newResult = rmfield(newResult,'Prob');
+Results.Result = [Results.Result newResult];
 
 %% Warm start
 
@@ -93,8 +96,24 @@ while Result.ExitFlag ~= 0
     
     Results.cost = [Results.cost cost];
     Results.x = [Results.x x_k];
-    Results.Result = [Results.Result Result];
+    newResult = rmfield(Result,'QP');
+    newResult = rmfield(newResult,'Prob');
+    Results.Result = [Results.Result newResult];
 end
+
+%% Aggregate results
+CPUtime = cumsum([0 arrayfun(@(x) x.CPUtime, ...
+    Results.Result)]);
+REALtime = cumsum([0 arrayfun(@(x) x.REALtime, ...
+    Results.Result)]);
+start = 5;
+plot(CPUtime(start:end)/60,Results.cost(start:end),'b.')
+% hold on;
+% plot(REALtime(start:end)/60,Results.cost(start:end),'k.')
+xlabel('Minutes')
+ylabel('Objective')
+title('MINOS-QP Performance')
+
 
 % Heuristic init point (by importance)
 % iter=299,     norm(Ax-b): 4.389436e+02, Time 362.87 sec (6.0478 min)

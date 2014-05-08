@@ -5,12 +5,17 @@ clc; clear all
 test = 'sparseObjZ';
 %test = 'objZ';
 
+noise = 0; % sets noise level
+
 % Preprocessing U to Nf
 % for i=1:102720 N(i)=sum(U(i,:)); end
 
-load('data/stevesSmallData.mat')
-%load('data/stevesData.mat')
+% select data input
+load('data/smaller_data.mat')
+% load('data/stevesSmallData.mat')
+% load('data/stevesData.mat')
 
+%% Initialization
 % Dimensions of the problem
 n = size(A,2);
 m = size(A,1);
@@ -22,33 +27,39 @@ z_true = x2z(x_true,N);
 
 %% Generate initial points
 fprintf('Generate initialization points\n\n')
-[x_init1,x_init2,x_init3,z_init1,z_init2,z_init3] = initXZ(n,N,x_true);
+% 1: random
+% 2: by importance (cheating-ish)
+% 3: 10^importance (cheating-ish)
+% 4: uniform
+[x_init1,x_init2,x_init3,x_init4,z_init1,z_init2,z_init3,z_init4] = ...
+    initXZ(n,N,x_true);
+
+% select initial point
+z_init = z_init4;
+x_init = x_init4;
 
 %% Compute sparse matrices
-
 fprintf('Compute sparse x0 and sparse N')
 [x0,N2] = computeSparseParam(n,N);
 
 %% Set up optimization problem
-noise = 0;
-
 alpha = (100*(noise^2)*(noise>.1))*(1-x_init2);
 b2 = b+normrnd(0,noise,m,1);
 if strcmp(test,'sparseObjZ')
     funObj = @(z)objectiveSparse(z,A,N2,x0,b2,zeros(n,1)); % no penalization (L2)
     funObj2 = @(z)objectiveSparse(z,A,N2,x0,b2,alpha);
     funProj = @(z)zProject(z,N);
-    init = z_init1;
+    init = z_init;
 elseif strcmp(test,'objZ')
     funObj = @(z)objective(z,A,N,b2,zeros(n,1)); % no penalization (L2)
     funObj2 = @(z)objective(z,A,N,b2,alpha);
     funProj = @(z)zProject(z,N);
-    init = z_init1;
+    init = z_init;
 elseif strcmp(test,'sparseObjX')
     funObj = @(x)objectiveX(x,A,b2,zeros(n,1));
     funObj2 = @(x)objectiveX(x,A,b2,alpha);
     funProj = @(x)xProject(x,N);
-    init = x_init1;
+    init = x_init;
 end
 
 %% Set Optimization Options
@@ -63,15 +74,15 @@ options = gOptions;
 %
 
 fprintf('\nProjected Gradient\n\n');
-tic
+tic; t = cputime;
 [zSPG,histSPG] = SPG(funObj,funProj,init,options);
-timeSPG = toc;
+timeSPG = toc; timeSPGCPU = cputime - t;
 
 fprintf('\nl-BFGS\n\n');
 
-tic
+tic; t = cputime;
 [zLBFGS,histLBFGS] = lbfgs2(funObj,funProj,init,options);
-timeLBFGS = toc;
+timeLBFGS = toc; timeLBFGSCPU = cputime - t;
 
 if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
     xSPG = x0+N2*zSPG; xLBFGS = x0+N2*zLBFGS;
@@ -79,24 +90,24 @@ else
     xSPG = zSPG; xLBFGS = zLBFGS;
 end
 %
-%% Run noisy case
+%% Run with regularization (but only in noisy case)
 
 if noise>0.1
     % Run Projected gradient with reg.
     %
     fprintf('\nProjected Gradient\n\n');
     options = gOptions;
-    tic
+    tic; t = cputime;
     [zSPG2,histSPG2] = SPG(funObj2,funProj,init,options);
-    timeSPG2 = toc;
+    timeSPG2 = toc; timeSPG2CPU = cputime - t;
     %
     % Run l-BFGS with reg.
     
     fprintf('\nl-BFGS\n\n');
     
-    tic
+    tic; t = cputime;
     [zLBFGS2,histLBFGS2] = lbfgs2(funObj2,funProj,init,options);
-    timeLBFGS2 = toc;
+    timeLBFGS2 = toc; timeLBFGS2CPU = cputime-t;
     
     if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
         xSPG2 = x0+N2*zSPG2; xLBFGS2 = x0+N2*zLBFGS2;
@@ -109,25 +120,33 @@ end
 %
 fprintf('\nProjected gradient without l2-regularization\n\n');
 
-fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-    norm(A*xSPG-b), norm(A*x_init3-b), max(abs(xSPG-x_true)), max(abs(x_true-x_init3)))
+fprintf(['norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: ' ...
+    '%.2f\nmax|x_init-x_true|: %.2f\n\n\n'], ...
+    norm(A*xSPG-b), norm(A*x_init-b), max(abs(xSPG-x_true)), ...
+    max(abs(x_true-x_init)))
 
 fprintf('\nLBFGS without l2-regularization\n\n');
 
-fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-    norm(A*xLBFGS-b), norm(A*x_init3-b), max(abs(xLBFGS-x_true)), max(abs(x_true-x_init3)))
+fprintf(['norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: ' ...
+    '%.2f\nmax|x_init-x_true|: %.2f\n\n\n'], ...
+    norm(A*xLBFGS-b), norm(A*x_init-b), max(abs(xLBFGS-x_true)), ...
+    max(abs(x_true-x_init)))
 
 if noise > 0.1
     
     fprintf('\nProjected gradient with l2-regularization\n\n');
     
-    fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-        norm(A*xSPG2-b), norm(A*x_init3-b), max(abs(xSPG2-x_true)), max(abs(x_true-x_init3)))
+    fprintf(['norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|'...
+        ': %.2f\nmax|x_init-x_true|: %.2f\n\n\n'], ...
+        norm(A*xSPG2-b), norm(A*x_init-b), max(abs(xSPG2-x_true)), ...
+        max(abs(x_true-x_init)))
     
     fprintf('\nLBFGS with l2-regularization\n\n');
     
-    fprintf('norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n', ...
-        norm(A*xLBFGS2-b), norm(A*x_init3-b), max(abs(xLBFGS2-x_true)), max(abs(x_true-x_init3)))
+    fprintf(['norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|'...
+        ': %.2f\nmax|x_init-x_true|: %.2f\n\n\n'], ...
+        norm(A*xLBFGS2-b), norm(A*x_init-b), max(abs(xLBFGS2-x_true)), ...
+        max(abs(x_true-x_init)))
     
 end
 %
@@ -163,20 +182,27 @@ for i=1:lenN
     k = k+N(i);
 end
 
-[fLBFGS,deltaLBFGS,delta2LBFGS] = computeHist(test,x0,N2,histLBFGS,x_true,N,f,A,b);
+[fLBFGS,deltaLBFGS,delta2LBFGS] = computeHist(test,x0,N2,histLBFGS,...
+    x_true,N,f,A,b);
 [fSPG,deltaSPG,delta2SPG] = computeHist(test,x0,N2,histSPG,x_true,N,f,A,b);
 if noise > 0.1
-    [fLBFGS2,deltaLBFGS2,delta2LBFGS2] = computeHist(test,x0,N2,histLBFGS2,x_true,N,f,A,b);
-    [fSPG2,deltaSPG2,delta2SPG2] = computeHist(test,x0,N2,histSPG2,x_true,N,f,A,b);
+    [fLBFGS2,deltaLBFGS2,delta2LBFGS2] = computeHist(test,x0,N2,...
+        histLBFGS2,x_true,N,f,A,b);
+    [fSPG2,deltaSPG2,delta2SPG2] = computeHist(test,x0,N2,histSPG2,...
+        x_true,N,f,A,b);
 end
 
 %% display results
 
-s1 = strcat('LBFGS (',sprintf('%.2f',timeLBFGS/60),' min)');
-s2 = strcat('SPG (',sprintf('%.2f',timeSPG/60),' min)');
+% s1 = strcat('LBFGS (',sprintf('%.2f',timeLBFGS/60),' min)');
+% s2 = strcat('SPG (',sprintf('%.2f',timeSPG/60),' min)');
+s1 = strcat('LBFGS (',sprintf('%.2f',timeLBFGSCPU/60),' min)');
+s2 = strcat('SPG (',sprintf('%.2f',timeSPGCPU/60),' min)');
 if noise>0.1
-    s3 = strcat('LBFGS reg (',sprintf('%.2f',timeLBFGS2/60),' min)');
-    s4 = strcat('SPG reg (',sprintf('%.2f',timeSPG2/60),' min)');
+%     s3 = strcat('LBFGS reg (',sprintf('%.2f',timeLBFGS2/60),' min)');
+%     s4 = strcat('SPG reg (',sprintf('%.2f',timeSPG2/60),' min)');
+    s3 = strcat('LBFGS reg (',sprintf('%.2f',timeLBFGS2CPU/60),' min)');
+    s4 = strcat('SPG reg (',sprintf('%.2f',timeSPG2CPU/60),' min)');
 end
 figure;
 
