@@ -10,7 +10,14 @@ clc;
 %% Load small synthetic dataset
 load data/stevesSmallData.mat
 n = size(A,2);
-    
+
+% Generate initial points
+fprintf('Generate initialization points\n\n')
+tic;
+[x_init,x_init2,x_init3,x_init4,z_init,z_init2,z_init3,z_init4] = ...
+    initXZ(n,N,x);
+fprintf('Time to generate initialization points %s\n',toc);
+
 tic;
 % Documentation: http://tomopt.com/docs/TOMLAB_SNOPT.pdf
 Name  = 'QP for route split estimation';
@@ -21,10 +28,10 @@ b_L = ones(size(a,1),1);    % Lower bounds on the linear constraints
 b_U = b_L;                  % Upper bounds on the linear constraints
 x_L = zeros(n,1);           % Lower bounds on the variables
 x_U = inf * ones(n,1);      % Upper bounds on the variables
-x_0 = rand(n,1);            % Starting point
-toc;
+x_0 = x_init2;              % Starting point, routes by importance
+fprintf('Time to set up problem %s\n',toc);
 
-%% Load direct inputs to TOMLAB
+%% Solver
 % tic; load data/stevesSmallData-tomlab.mat; toc;
 
 %   x_min and x_max only needed if doing plots
@@ -46,6 +53,7 @@ Prob = qpAssign(F, c, a, b_L, b_U, x_L, x_U, x_0, 'QPRouteSplit');
 % Prob.SOL.optPar(30)   = 200;     % Setting maximum number of iterations
 Prob.SOL.optPar(5)    = 1;     % Setting print frequency
 Prob.SOL.optPar(6)    = 1;     % Setting summary frequency
+Prob.SOL.optPar(12)   = 10;    % Setting optimality tolerance
 Prob.SOL.PrintFile = 'QPRouteSplit-print.txt';
 Prob.SOL.SummFile =  'QPRouteSplit-summary.txt';
 Prob.PriLevOpt = 2;
@@ -58,10 +66,15 @@ toc
 % When the Projected gradient gPr is very small, the minimum is found
 % with good accuracy
 
-PrintResult(Result); 
-fprintf('L2 error: %s\n', norm(A * Result.x_k - b))
+PrintResult(Result);
+fprintf('norm(Ax-b): %s\n', norm(A * Result.x_k - b))
 
+% With random initial point
 % iter=2,       L2 error: 5.996739e+05
 % iter=20,      L2 error: 5.888152e+05
 % iter=200,     L2 error: 6.035505e+05
 % iter=25556,   L2 error: 1.545041e-06, Time: 6202.34 seconds (103.372 min)
+
+% With heuristic initial point x_init2
+% iter=1602,    L2 error: 1.730858e-06 , Time: 5915.45 seconds (98.591 min)
+% iter=1602,    norm(Ax-b): 1.730858e-06,Time: 3050.89 seconds
