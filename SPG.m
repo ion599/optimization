@@ -1,6 +1,7 @@
-function [w, hist] = SPG(funObj,funProj,w,options)
+function [w, hist, timehist] = SPG(funObj,funProj,w,options)
 
 hist = [];
+timehist = [];
 
 %% Process Options
 if nargin < 4
@@ -14,6 +15,8 @@ end
 if verbose
     fprintf('%6s %6s %12s %12s %12s %6s\n','Iter','fEvals','stepLen','fVal','optCond','nnz');
 end
+
+tic
 
 %% Evaluate Initial Point
 n = length(w);
@@ -165,7 +168,10 @@ for i = 1:maxIter
     end
     
     if mod(i,100)==0
+        time = toc;
+        timehist = [timehist, time];
         hist = [hist, w(1:n)-w(n+1:end)];
+        tic
     end
     
 end
