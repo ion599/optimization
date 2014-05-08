@@ -8,7 +8,8 @@ clc;
 % blocks = p.blocks;
 
 %% Load small synthetic dataset
-load data/stevesSmallData.mat
+load('data/smaller_data.mat')
+% load data/stevesSmallData.mat
 
 %% Load large synthetic dataset
 % load data/stevesData.mat
