@@ -1,4 +1,5 @@
 import solvers
+import scipy.io as sio
 from util import PROB_SIMPLEX, EQ_CONSTR_ELIM, \
         L_BFGS, ADMM, SPG, load_data
 import util
@@ -21,6 +22,8 @@ def main():
     # load data
 
     A, b, N, block_sizes, x_true = load_data(args.file)
+    sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,'x_true':x_true})
+    exit()
 
     # Sample usage
     #P = A.T.dot(A)

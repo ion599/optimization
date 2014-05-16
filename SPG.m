@@ -1,6 +1,7 @@
-function [w, hist] = SPG(funObj,funProj,w,options)
+function [w, hist, cv_error] = SPG(funObj,funProj,funCalcCVError,w,options)
 
 hist = [];
+cv_error = [funCalcCVError(w)];
 
 %% Process Options
 if nargin < 4
@@ -164,7 +165,11 @@ for i = 1:maxIter
         break;
     end
     
-    if mod(i,100)==0
+    if mod(i,10)==0
+        cv_error = [cv_error, funCalcCVError(w(1:n)-w(n+1:end))];
+    end
+    
+    if mod(i,10)==0
         hist = [hist, w(1:n)-w(n+1:end)];
     end
     
