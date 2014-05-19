@@ -1,7 +1,8 @@
-function [w, hist, cv_error] = SPG(funObj,funProj,funCalcCVError,w,options)
+function [w, hist, cv_error, timehist] = SPG(funObj,funProj,funCalcCVError,w,options)
 
 hist = [];
 cv_error = [funCalcCVError(w)];
+timehist = [];
 
 %% Process Options
 if nargin < 4
@@ -15,6 +16,8 @@ end
 if verbose
     fprintf('%6s %6s %12s %12s %12s %6s %6s\n','Iter','fEvals','stepLen','fVal','optCond','nnz','g_norm');
 end
+
+tic
 
 %% Evaluate Initial Point
 n = length(w);
@@ -164,13 +167,16 @@ for i = 1:maxIter
         end
         break;
     end
-    
+   
     if mod(i,10)==0
         cv_error = [cv_error, funCalcCVError(w(1:n)-w(n+1:end))];
     end
     
     if mod(i,10)==0
+        time = toc;
+        timehist = [timehist, time];
         hist = [hist, w(1:n)-w(n+1:end)];
+        tic
     end
     
 end

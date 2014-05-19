@@ -5,13 +5,21 @@ clear all
 test = 'sparseObjZ';
 %test = 'objZ';
 
+noise = 0; % sets noise level
+
 % Preprocessing U to Nf
 % for i=1:102720 N(i)=sum(U(i,:)); end
 
-load('data/fullData.mat')
-x_true = x_true';
-b = b';
-%load('data/stevesData.mat')
+% select data input
+% load('data/smaller_data.mat')
+load('data/stevesSmallData.mat')
+x_true = x;
+b = A*x_true;
+% load('data/stevesData.mat')
+% load('data/fullData.mat')
+% x_true = x_true';
+% b = b';
+% load('data/stevesData.mat')
 
 m = size(A,1);
 train_indices = randperm(m);
@@ -26,6 +34,8 @@ b_test = b(test_indices);
 A = A_train;
 b = b_train;
 
+%% Initialization
+
 % Dimensions of the problem
 n = size(A,2);
 m = size(A,1);
@@ -37,16 +47,23 @@ z_true = x2z(x_true,N);
 
 %% Generate initial points
 fprintf('Generate initialization points\n\n')
-[x_init1,x_init2,x_init3,z_init1,z_init2,z_init3] = initXZ(n,N,x_true);
+% 1: random
+% 2: by importance (cheating-ish)
+% 3: 10^importance (cheating-ish)
+% 4: uniform
+[x_init1,x_init2,x_init3,x_init4,z_init1,z_init2,z_init3,z_init4] = ...
+    initXZ(n,N,x_true);
+
+% select initial point
+z_init = z_init4;
+x_init = x_init4;
 
 %% Compute sparse matrices
-
 fprintf('Compute sparse x0 and sparse N')
-[x0,~] = computeSparseParam(n,N);
+[x0,N2] = computeSparseParam(n,N);
+N2
 
 %% Set up optimization problem
-noise = 0;
-
 alpha = (100*(noise^2)*(noise>.1))*(1-x_init2);
 b2 = b+normrnd(0,noise,m,1);
 
@@ -58,12 +75,12 @@ if strcmp(test,'sparseObjZ')
     funCalcCVError = @(x) norm(A_test*((N2*x)+x0) - b_test,2);
     target = b2-A*x0;
     funProj = @(z)zProject(z,N);
-    init = z_init3;
+    init = z_init;
 elseif strcmp(test,'objZ')
     funObj = @(z)objective(z,A,N,b2,zeros(n,1)); % no penalization (L2)
     funObj2 = @(z)objective(z,A,N,b2,alpha);
     funProj = @(z)zProject(z,N);
-    init = z_init1;
+    init = z_init;
 elseif strcmp(test,'sparseObjX')
     funObj = @(x)objectiveX(x,A,b2,zeros(n,1));
     funObj2 = @(x)objectiveX(x,A,b2,alpha);
@@ -72,11 +89,11 @@ elseif strcmp(test,'sparseObjX')
     funApply_T = @(x) A'*x;
     target = b2;
     funProj = @(x)xProject(x,N);
-    init = x_init3;
+    init = x_init;
 end
 
 %% Set Optimization Options
-gOptions.maxIter = 300;
+gOptions.maxIter = 200;
 gOptions.verbose = 1; % Set to 0 to turn off output
 gOptions.suffDec = .3;
 gOptions.corrections = 40; % Number of corrections to store for L-BFGS method
@@ -97,18 +114,18 @@ timeDORE = toc;
 fprintf('\nProjected Gradient\n\n');
 options = gOptions;
 
-tic
-[zSPG,histSPG,cv_error_spg] = SPG(funObj,funProj,funCalcCVError,init,options);
-timeSPG = toc;
+tic; t = cputime;
+[zSPG,histSPG,cv_error_spg,timeSPG] = SPG(funObj,funProj,funCalcCVError,init,options);
+timeSPG = toc; timeSPGCPU = cputime - t;
 
 %% less iterations
 
 fprintf('\nl-BFGS\n\n');
 options = gOptions;
 
-tic
-[zLBFGS,histLBFGS,cv_error_lbfgs] = lbfgs2(funObj,funProj,funCalcCVError,init,options);
-timeLBFGS = toc;
+tic; t = cputime;
+[zLBFGS,histLBFGS,cv_error_lbfgs,timeLBFGS] = lbfgs2(funObj,funProj,funCalcCVError,init,options);
+timeLBFGS = toc; timeLBFGSCPU = cputime - t;
 
 %% Convert units
 if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
@@ -117,24 +134,24 @@ else
     xSPG = zSPG; xLBFGS = zLBFGS; xDORE = zDORE;
 end
 %
-%% Run noisy case
+%% Run with regularization (but only in noisy case)
 
 if noise>0.1
     % Run Projected gradient with reg.
     %
     fprintf('\nProjected Gradient\n\n');
     options = gOptions;
-    tic
+    tic; t = cputime;
     [zSPG2,histSPG2] = SPG(funObj2,funProj,funCalcCVError,init,options);
-    timeSPG2 = toc;
+    timeSPG2 = toc; timeSPG2CPU = cputime - t;
     %
     % Run l-BFGS with reg.
     
     fprintf('\nl-BFGS\n\n');
     
-    tic
+    tic; t = cputime;
     [zLBFGS2,histLBFGS2] = lbfgs2(funObj2,funProj,funCalcCVError,init,options);
-    timeLBFGS2 = toc;
+    timeLBFGS2 = toc; timeLBFGS2CPU = cputime-t;
     
     if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
         xSPG2 = x0+N2*zSPG2; xLBFGS2 = x0+N2*zLBFGS2;
@@ -220,29 +237,33 @@ for i=1:lenN
     k = k+N(i);
 end
 
-[fLBFGS,deltaLBFGS,delta2LBFGS] = computeHist(test,x0,N2,histLBFGS,x_true,N,f,A,b);
+[fLBFGS,deltaLBFGS,delta2LBFGS] = computeHist(test,x0,N2,histLBFGS,...
+    x_true,N,f,A,b);
 [fSPG,deltaSPG,delta2SPG] = computeHist(test,x0,N2,histSPG,x_true,N,f,A,b);
 [fDORE,deltaDORE,delta2DORE] = computeHist(test,x0,N2,histDORE,x_true,N,f,A,b);
 if noise > 0.1
-    [fLBFGS2,deltaLBFGS2,delta2LBFGS2] = computeHist(test,x0,N2,histLBFGS2,x_true,N,f,A,b);
-    [fSPG2,deltaSPG2,delta2SPG2] = computeHist(test,x0,N2,histSPG2,x_true,N,f,A,b);
+    [fLBFGS2,deltaLBFGS2,delta2LBFGS2] = computeHist(test,x0,N2,...
+        histLBFGS2,x_true,N,f,A,b);
+    [fSPG2,deltaSPG2,delta2SPG2] = computeHist(test,x0,N2,histSPG2,...
+        x_true,N,f,A,b);
 end
 
 %% display results
 
-s1 = strcat('LBFGS (',sprintf('%.2f',timeLBFGS/60),' min)');
-s2 = strcat('SPG (',sprintf('%.2f',timeSPG/60),' min)');
+s1 = strcat('LBFGS (',sprintf('%.2f',timeLBFGSCPU/60),' min)');
+s2 = strcat('SPG (',sprintf('%.2f',timeSPGCPU/60),' min)');
+% TODO: add CPU time to DORE
 s5 = strcat('DORE (',sprintf('%.2f',timeDORE/60),' min)');
 if noise>0.1
-    s3 = strcat('LBFGS reg (',sprintf('%.2f',timeLBFGS2/60),' min)');
-    s4 = strcat('SPG reg (',sprintf('%.2f',timeSPG2/60),' min)');
+    s3 = strcat('LBFGS reg (',sprintf('%.2f',timeLBFGS2CPU/60),' min)');
+    s4 = strcat('SPG reg (',sprintf('%.2f',timeSPG2CPU/60),' min)');
 end
 % figure;
 
 plot(10*[1:length(fLBFGS)],fLBFGS,'k-.')
-% title('Objective value vs. Iteration');
-% xlabel('Iterations');
-% ylabel('f value');
+title('Objective value, CV vs. Iteration');
+xlabel('Iterations');
+ylabel('f value');
 % hold on
 plot(10*[1:length(fSPG)],fSPG,'r-.')
 plot(10*[1:length(fDORE)],fDORE,'b-.')
@@ -251,7 +272,7 @@ if noise > 0.1
     plot(100*[1:length(fLBFGS2)],fLBFGS2,'k')
     hold on
     plot(100*[1:length(fSPG2)],fSPG2,'g')
-    legend(s1,s2,s5,s3,s4)
+    legend('CV SPG', 'CV DORE', 'CV LBFGS',s1,s2,s5,s3,s4)
 else
     legend('CV SPG', 'CV DORE', 'CV LBFGS',s1,s2,s5)
 end
