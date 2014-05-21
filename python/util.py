@@ -1,4 +1,8 @@
+import scipy.sparse
+import scipy.sparse.linalg
+import scipy.sparse.linalg as sla
 import numpy as np
+import scipy.io as sio
 from scipy.linalg import block_diag
 import scipy.sparse as sps
 import scipy.io as sio
@@ -113,3 +117,24 @@ def AN(A,N):
 # Do we ever use U?
 def U(block_sizes):
     pass
+
+def lsv_operator(A, N):
+    def matmuldyad(v):
+        return A.dot(N.dot(v))
+
+    def rmatmuldyad(v):
+        return N.T.dot(A.T.dot(v))
+    normalized_lin_op = scipy.sparse.linalg.LinearOperator((A.shape[0], N.shape[1]), matmuldyad, rmatmuldyad)
+
+    def matvec_XH_X(v):
+        return normalized_lin_op.rmatvec(normalized_lin_op.matvec(v))
+
+    which='LM'
+    v0=None
+    maxiter=None
+    return_singular_vectors=False
+
+    XH_X = scipy.sparse.linalg.LinearOperator(matvec=matvec_XH_X, dtype=A.dtype, shape=(N.shape[1], N.shape[1]))
+    eigvals = sla.eigs(XH_X, k=1, tol=0, maxiter=None, ncv=10, which=which, v0=v0, return_eigenvectors=False)
+    lsv = np.sqrt(eigvals)
+    return lsv[0].real
