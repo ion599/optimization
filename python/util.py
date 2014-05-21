@@ -5,6 +5,8 @@ import numpy as np
 import scipy.io as sio
 from scipy.linalg import block_diag
 import scipy.sparse as sps
+import sys
+import time
 import scipy.io as sio
 import logging
 
@@ -138,3 +140,20 @@ def lsv_operator(A, N):
     eigvals = sla.eigs(XH_X, k=1, tol=0, maxiter=None, ncv=10, which=which, v0=v0, return_eigenvectors=False)
     lsv = np.sqrt(eigvals)
     return lsv[0].real
+
+def timer(func, number= 1):
+    '''
+    Output the average time
+    '''
+    total = 0
+    for _ in xrange(number):
+        if sys.platform == "win32":
+            t = time.clock
+        else:
+            t = time.time
+        start = t()
+        output = func()
+        end = t()
+        total += end - start
+
+    return output, total / number

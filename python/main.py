@@ -50,9 +50,10 @@ def main():
     def diagnostics(value, iter_):
         progress[iter_] = la.norm(A.dot(N.dot(value)) - target, 2)
 
-    z = solvers.least_squares(lambda z: A_dore.dot(N.dot(z)), lambda b: N.T.dot(A_dore.T.dot(b)), \
+    z, dore_time = util.timer(lambda: solvers.least_squares(lambda z: A_dore.dot(N.dot(z)), lambda b: N.T.dot(A_dore.T.dot(b)), \
             target_dore, lambda x: simplex_projection(block_sizes - 1, x), \
-            np.zeros(N.shape[1]), diagnostics=diagnostics)
+            np.zeros(N.shape[1]), diagnostics=diagnostics))
+    print 'Time (DORE):', float(dore_time)
     xDORE = np.squeeze(np.asarray(N.dot(z) + x0))
     x_init = np.squeeze(np.asarray(x0))
 
