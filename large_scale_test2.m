@@ -1,8 +1,8 @@
 %% Generate Some Synthetic Data
 clear all
 
-%test = 'sparseObjX';
-test = 'sparseObjZ';
+test = 'sparseObjX';
+% test = 'sparseObjZ';
 %test = 'objZ';
 
 noise = 0; % sets noise level
@@ -59,7 +59,7 @@ z_init = z_init4;
 x_init = x_init4;
 
 %% Compute sparse matrices
-fprintf('Compute sparse x0 and sparse N')
+fprintf('Compute sparse x0 and sparse N\n')
 [x0,N2] = computeSparseParam(n,N);
 N2
 

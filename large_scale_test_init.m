@@ -5,7 +5,7 @@ clc; clear all
 test = 'sparseObjZ';
 %test = 'objZ';
 
-noise = 0; % sets noise level
+noise = 0.0; % sets noise level
 
 % Preprocessing U to Nf
 % for i=1:102720 N(i)=sum(U(i,:)); end
@@ -225,14 +225,17 @@ end
 
 s1 = strcat('LBFGS rand (',sprintf('%.2f',timeLBFGSCPU1/60),' min)');
 s2 = strcat('LBFGS popular (',sprintf('%.2f',timeLBFGSCPU2/60),' min)');
-s3 = strcat('LBFGS 10^pop (',sprintf('%.2f',timeLBFGSCPU3/60),' min)');
+s3 = strcat('LBFGS 10^{pop} (',sprintf('%.2f',timeLBFGSCPU3/60),' min)');
 s4 = strcat('LBFGS uniform (',sprintf('%.2f',timeLBFGSCPU4/60),' min)');
 if noise>0.1
     s5 = strcat('LBFGS rand reg (',sprintf('%.2f',timeLBFGSCPU1R/60),' min)');
     s6 = strcat('LBFGS pop reg (',sprintf('%.2f',timeLBFGSCPU2R/60),' min)');
-    s7 = strcat('LBFGS 10^pop reg (',sprintf('%.2f',timeLBFGSCPU3R/60),' min)');
+    s7 = strcat('LBFGS 10^{pop} reg (',sprintf('%.2f',timeLBFGSCPU3R/60),' min)');
     s8 = strcat('LBFGS uniform reg (',sprintf('%.2f',timeLBFGSCPU4R/60),' min)');
 end
+
+
+%% Iteration plots
 figure;
 
 plot(100*[1:length(fLBFGS1)],fLBFGS1,'b')
@@ -299,5 +302,73 @@ else
     legend(s1,s2,s3,s4)
 end
 
-%%
+%% Time plots
+
+figure;
+
+plot(cumsum(timesLBFGS1)/60,log(fLBFGS1),'b')
+title('Objective value vs. time');
+xlabel('Elapsed time (minutes)');
+ylabel('log f value');
+hold on
+plot(cumsum(timesLBFGS2)/60,log(fLBFGS2),'r')
+% plot(cumsum(timesLBFGS3)/60,fLBFGS3,'g')
+plot(cumsum(timesLBFGS4)/60,log(fLBFGS4),'k')
+if noise > 0.1
+    hold on
+    plot(cumsum(timesLBFGS1)/60,fLBFGS1R,'b--')
+    hold on
+    plot(cumsum(timesLBFGS2)/60,fLBFGS2R,'r--')
+%     plot(cumsum(timesLBFGS3)/60,fLBFGS3R,'g--')
+    plot(cumsum(timesLBFGS4)/60,fLBFGS4R,'k--')
+    legend(s1,s2,s3,s4,s5,s6,s7,s8)
+else
+    legend(s1,s2,s4)
+end
+
+figure;
+
+plot(cumsum(timesLBFGS1)/60,deltaLBFGS1,'b')
+title('|x-xtrue| vs. time');
+xlabel('Elapsed time (minutes)');
+ylabel('norm');
+hold on
+plot(cumsum(timesLBFGS2)/60,deltaLBFGS2,'r')
+plot(cumsum(timesLBFGS3)/60,deltaLBFGS3,'g')
+plot(cumsum(timesLBFGS4)/60,deltaLBFGS4,'k')
+if noise > 0.1
+    hold on
+    plot(cumsum(timesLBFGS1)/60,deltaLBFGS1R,'b--')
+    hold on
+    plot(cumsum(timesLBFGS2)/60,deltaLBFGS2R,'r--')
+    plot(cumsum(timesLBFGS3)/60,deltaLBFGS3R,'g--')
+    plot(cumsum(timesLBFGS4)/60,deltaLBFGS4R,'k--')
+    legend(s1,s2,s3,s4,s5,s6,s7,s8)
+else
+    legend(s1,s2,s3,s4)
+end
+
+figure;
+
+plot(cumsum(timesLBFGS1)/60,delta2LBFGS1,'b')
+title('f*|x-xtrue| vs. time');
+xlabel('Elapsed time (minutes)');
+ylabel('norm');
+hold on
+plot(cumsum(timesLBFGS2)/60,delta2LBFGS2,'r')
+plot(cumsum(timesLBFGS3)/60,delta2LBFGS3,'g')
+plot(cumsum(timesLBFGS4)/60,delta2LBFGS4,'k')
+if noise > 0.1
+    hold on
+    plot(cumsum(timesLBFGS1)/60,delta2LBFGS1R,'b--')
+    hold on
+    plot(cumsum(timesLBFGS2)/60,delta2LBFGS2R,'r--')
+    plot(cumsum(timesLBFGS3)/60,delta2LBFGS3R,'g--')
+    plot(cumsum(timesLBFGS4)/60,delta2LBFGS4R,'k--')
+    legend(s1,s2,s3,s4,s5,s6,s7,s8)
+else
+    legend(s1,s2,s3,s4)
+end
+
+
 

@@ -1,7 +1,6 @@
-function [w, hist, cv_error, timehist] = SPG(funObj,funProj,funCalcCVError,w,options)
+function [w, hist, timehist] = SPG(funObj,funProj,w,options)
 
 hist = [];
-cv_error = [funCalcCVError(w)];
 timehist = [];
 
 %% Process Options
@@ -14,10 +13,10 @@ end
     'maxIter',1000,'suffDec',1e-4,'memory',10);
 
 if verbose
-    fprintf('%6s %6s %12s %12s %12s %6s %6s\n','Iter','fEvals','stepLen','fVal','optCond','nnz','g_norm');
+    fprintf('%6s %6s %12s %12s %12s %6s\n','Iter','fEvals','stepLen','fVal','optCond','nnz');
 end
 
-tic
+time = cputime;
 
 %% Evaluate Initial Point
 n = length(w);
@@ -140,7 +139,7 @@ for i = 1:maxIter
     
     % Output Log
     if verbose
-        fprintf('%6d %6d %8.5e %8.5e %8.5e %6d %6d\n',i,funEvals,t,f,max(abs(g(W))),nnz(w(1:n)-w(n+1:end)), norm(g,2));
+        fprintf('%6d %6d %8.5e %8.5e %8.5e %6d\n',i,funEvals,t,f,max(abs(g(W))),nnz(w(1:n)-w(n+1:end)));
     end
     
     % Check Optimality
@@ -159,7 +158,7 @@ for i = 1:maxIter
         end
         break;
     end
-    
+
     % Check for iteration limit
     if funEvals >= maxIter
         if verbose
@@ -167,18 +166,13 @@ for i = 1:maxIter
         end
         break;
     end
-   
-    if mod(i,10)==0
-        cv_error = [cv_error, funCalcCVError(w(1:n)-w(n+1:end))];
-    end
-    
-    if mod(i,10)==0
-        time = toc;
-        timehist = [timehist, time];
+
+    if mod(i,5)==0
+        timehist = [timehist, cputime - t];
         hist = [hist, w(1:n)-w(n+1:end)];
-        tic
+        time = cputime;
     end
-    
+
 end
 w = w(1:n)-w(n+1:end);
 

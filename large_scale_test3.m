@@ -1,7 +1,8 @@
 %% Preprocess parameters
 
 clc; clear all
-load('data/smaller_data.mat')
+% load('data/smaller_data.mat')
+load data/stevesSmallData.mat
 n = size(A,2);
 m = size(A,1);
 x_true = x;
