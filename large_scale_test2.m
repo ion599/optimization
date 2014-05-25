@@ -93,11 +93,7 @@ elseif strcmp(test,'sparseObjX')
 end
 
 %% Set Optimization Options
-<<<<<<< HEAD
-gOptions.maxIter = 850;
-=======
 gOptions.maxIter = 200;
->>>>>>> 22585511c38872bdc2075dc7f4e32437a42c6627
 gOptions.verbose = 1; % Set to 0 to turn off output
 gOptions.suffDec = .3;
 gOptions.corrections = 40; % Number of corrections to store for L-BFGS method
@@ -119,11 +115,7 @@ fprintf('\nProjected Gradient\n\n');
 options = gOptions;
 
 tic; t = cputime;
-<<<<<<< HEAD
-[zSPG,histSPG,timesSPG] = SPG(funObj,funProj,init,options);
-=======
 [zSPG,histSPG,cv_error_spg,timeSPG] = SPG(funObj,funProj,funCalcCVError,init,options);
->>>>>>> 22585511c38872bdc2075dc7f4e32437a42c6627
 timeSPG = toc; timeSPGCPU = cputime - t;
 
 %% less iterations
@@ -132,11 +124,7 @@ fprintf('\nl-BFGS\n\n');
 options = gOptions;
 
 tic; t = cputime;
-<<<<<<< HEAD
-[zLBFGS,histLBFGS,timesLBFGS] = lbfgs2(funObj,funProj,init,options);
-=======
 [zLBFGS,histLBFGS,cv_error_lbfgs,timeLBFGS] = lbfgs2(funObj,funProj,funCalcCVError,init,options);
->>>>>>> 22585511c38872bdc2075dc7f4e32437a42c6627
 timeLBFGS = toc; timeLBFGSCPU = cputime - t;
 
 %% Convert units
@@ -154,11 +142,7 @@ if noise>0.1
     fprintf('\nProjected Gradient\n\n');
     options = gOptions;
     tic; t = cputime;
-<<<<<<< HEAD
-    [zSPG2,histSPG2,timesSPG2] = SPG(funObj2,funProj,init,options);
-=======
     [zSPG2,histSPG2] = SPG(funObj2,funProj,funCalcCVError,init,options);
->>>>>>> 22585511c38872bdc2075dc7f4e32437a42c6627
     timeSPG2 = toc; timeSPG2CPU = cputime - t;
     %
     % Run l-BFGS with reg.
@@ -166,11 +150,7 @@ if noise>0.1
     fprintf('\nl-BFGS\n\n');
     
     tic; t = cputime;
-<<<<<<< HEAD
-    [zLBFGS2,histLBFGS2,timesSPG2] = lbfgs2(funObj2,funProj,init,options);
-=======
     [zLBFGS2,histLBFGS2] = lbfgs2(funObj2,funProj,funCalcCVError,init,options);
->>>>>>> 22585511c38872bdc2075dc7f4e32437a42c6627
     timeLBFGS2 = toc; timeLBFGS2CPU = cputime-t;
     
     if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
