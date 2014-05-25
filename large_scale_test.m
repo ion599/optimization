@@ -4,8 +4,9 @@ clc; clear all
 % Preprocessing U to Nf
 % for i=1:102720 N(i)=sum(U(i,:)); end
 
-%load('data/stevesSmallData.mat')
-load('data/stevesData.mat')
+load('data/stevesSmallData.mat')
+x_true = x;
+%load('data/stevesData.mat')
 
 % Dimensions of the problem
 n = size(A,2);

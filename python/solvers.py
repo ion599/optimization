@@ -1,5 +1,6 @@
 from util import is_ones, all_equal, block_e, PROB_SIMPLEX, EQ_CONSTR_ELIM, \
         L_BFGS, ADMM, SPG
+import dore
 import numpy as np
 import scipy.io as sio
 from numpy import ones, array
@@ -31,3 +32,6 @@ def qp2(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None, \
                 pass
     else:
         print "'block_sizes' parameter required"
+
+def least_squares(linop, linop_transpose, target, projection, initial, diagnostics):
+    return dore.solve(linop, linop_transpose, target, projection, initial, diagnostics, i = 200)
