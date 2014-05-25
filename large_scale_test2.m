@@ -1,8 +1,8 @@
 %% Generate Some Synthetic Data
 clc; clear all
 
-%test = 'sparseObjX';
-test = 'sparseObjZ';
+test = 'sparseObjX';
+% test = 'sparseObjZ';
 %test = 'objZ';
 
 noise = 0; % sets noise level
@@ -11,7 +11,8 @@ noise = 0; % sets noise level
 % for i=1:102720 N(i)=sum(U(i,:)); end
 
 % select data input
-load('data/smaller_data.mat')
+% load('data/smaller_data.mat')
+load data/stevesSmallData.mat
 % load('data/stevesSmallData.mat')
 % load('data/stevesData.mat')
 
@@ -39,7 +40,7 @@ z_init = z_init4;
 x_init = x_init4;
 
 %% Compute sparse matrices
-fprintf('Compute sparse x0 and sparse N')
+fprintf('Compute sparse x0 and sparse N\n')
 [x0,N2] = computeSparseParam(n,N);
 
 %% Set up optimization problem
@@ -63,7 +64,7 @@ elseif strcmp(test,'sparseObjX')
 end
 
 %% Set Optimization Options
-gOptions.maxIter = 2000;
+gOptions.maxIter = 850;
 gOptions.verbose = 1; % Set to 0 to turn off output
 gOptions.suffDec = .3;
 gOptions.corrections = 500; % Number of corrections to store for L-BFGS methods
@@ -75,13 +76,13 @@ options = gOptions;
 
 fprintf('\nProjected Gradient\n\n');
 tic; t = cputime;
-[zSPG,histSPG,timeSPG] = SPG(funObj,funProj,init,options);
+[zSPG,histSPG,timesSPG] = SPG(funObj,funProj,init,options);
 timeSPG = toc; timeSPGCPU = cputime - t;
 
 fprintf('\nl-BFGS\n\n');
 
 tic; t = cputime;
-[zLBFGS,histLBFGS,timeLBFGS] = lbfgs2(funObj,funProj,init,options);
+[zLBFGS,histLBFGS,timesLBFGS] = lbfgs2(funObj,funProj,init,options);
 timeLBFGS = toc; timeLBFGSCPU = cputime - t;
 
 if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
@@ -98,7 +99,7 @@ if noise>0.1
     fprintf('\nProjected Gradient\n\n');
     options = gOptions;
     tic; t = cputime;
-    [zSPG2,histSPG2] = SPG(funObj2,funProj,init,options);
+    [zSPG2,histSPG2,timesSPG2] = SPG(funObj2,funProj,init,options);
     timeSPG2 = toc; timeSPG2CPU = cputime - t;
     %
     % Run l-BFGS with reg.
@@ -106,7 +107,7 @@ if noise>0.1
     fprintf('\nl-BFGS\n\n');
     
     tic; t = cputime;
-    [zLBFGS2,histLBFGS2] = lbfgs2(funObj2,funProj,init,options);
+    [zLBFGS2,histLBFGS2,timesSPG2] = lbfgs2(funObj2,funProj,init,options);
     timeLBFGS2 = toc; timeLBFGS2CPU = cputime-t;
     
     if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')

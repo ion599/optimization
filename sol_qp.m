@@ -8,8 +8,8 @@ clc;
 % blocks = p.blocks;
 
 %% Load small synthetic dataset
-load('data/smaller_data.mat')
-% load data/stevesSmallData.mat
+% load('data/smaller_data.mat')
+load data/stevesSmallData.mat
 n = size(A,2);
 
 % Generate initial points

@@ -81,10 +81,10 @@ PrintResult(Result);
 fprintf('norm(Ax-b): %s\n', norm(A * x_k - b))
 fprintf('norm(Ux-1): %e\n', norm(U * x_k - 1))
 
-% Barrier QP (4)
+% Barrier QP (4) using init2
 % iter=8,   norm(Ax-b): 3.170721e-04, Time 6054.040000 sec (100.901 min)
 
-% Sifting QP solver (5)
+% Sifting QP solver (5) using init2
 % iter=8,   norm(Ax-b): 3.068989e-04, Time 5623.960000 sec
 
 

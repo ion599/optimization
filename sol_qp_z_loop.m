@@ -8,8 +8,8 @@ clc;
 % blocks = p.blocks;
 
 %% Load small synthetic dataset
-load('data/smaller_data.mat')
-% load data/stevesSmallData.mat
+% load('data/smaller_data.mat')
+load data/stevesSmallData.mat
 
 %% Load large synthetic dataset
 % load data/stevesData.mat
@@ -38,8 +38,10 @@ c   = (A*x0-b)'*A*N2;           % Vector c in 1/2 * x' * F * x + c' * x
 a   = N2;                       % Constraint matrix
 b_L = -x0;                      % Lower bounds on the linear constraints
 b_U = inf * ones(size(a,1),1);  % Upper bounds on the linear constraints
-z_0 = z_init4;                  % Starting point
-x_0 = x_init4;
+% z_0 = z_init4;                  % Starting point
+% x_0 = x_init4;
+z_0 = x2z(x0,N);                  % Starting point
+x_0 = x0;
 fprintf('Time to set up problem %s sec\n',toc);
 
 %% Storing state
@@ -128,3 +130,28 @@ title('MINOS-QP Performance')
 % iter=800,     norm(Ax-b): 4.130360e+02, Time 930.65 sec
 % iter=810,     norm(Ax-b): 4.116748e+02, Time +167.68 sec
 % iter=820,     norm(Ax=b): 4.102483e+02, Time +21.51 sec
+
+%% Getting time information for 10^2 precision
+load LBFGS_zero_init.mat
+cumtimehistz = cumsum(timehistz);
+cumtimehistx = cumsum(timehistx);
+fx(end)
+cumtimehistx(end)/60
+fz(end-7)
+cumtimehistz(end-7)/60
+
+load SPG_uniform_init.mat
+cumtimehistz = cumsum(timehistz);
+cumtimehistx = cumsum(timehistx);
+fx(end-19)
+cumtimehistx(end-19)/60
+fz(end-32)
+cumtimehistz(end-32)/60
+
+load SPG_zero_init_more_iter.mat
+cumtimehistz = cumsum(timehistz);
+cumtimehistx = cumsum(timehistx);
+fx(end)
+cumtimehistx(end)/60
+fz(end)
+cumtimehistz(end)/60
