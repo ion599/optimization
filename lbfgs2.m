@@ -198,7 +198,7 @@ for i = 1:maxIter
         hist = [hist, w(1:n)-w(n+1:end)];
         time = cputime;
     end
-    
+
 end
 
 w = w(1:n)-w(n+1:end);

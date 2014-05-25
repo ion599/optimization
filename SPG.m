@@ -158,7 +158,7 @@ for i = 1:maxIter
         end
         break;
     end
-    
+
     % Check for iteration limit
     if funEvals >= maxIter
         if verbose
@@ -166,14 +166,13 @@ for i = 1:maxIter
         end
         break;
     end
-    
     if mod(i,50)==0
         e = cputime-time;
         timehist = [timehist, e];
         hist = [hist, w(1:n)-w(n+1:end)];
         time = cputime;
     end
-    
+
 end
 w = w(1:n)-w(n+1:end);
 

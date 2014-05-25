@@ -36,3 +36,4 @@ for i=1:lenHist
     d2(i+1) = r;
 end
 time = [0; cumsum(timehist)'];
+end
