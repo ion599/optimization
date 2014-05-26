@@ -4,12 +4,16 @@ files = dir(DATA_CV_DIR);
 colors = 'ymcrgbk';
 k=3;
 
+figure
+subplot(1,2,1)
 for i=1:size(files)
     file = files(i);
     if strcmp(file.name,'.') == 1 || strcmp(file.name,'..') == 1
         continue;
     end
     load(sprintf('%s/%s',DATA_CV_DIR,file.name));
+    fprintf('%s\n',file.name);
+    color = colors(i);
     for q=1:k
         r = result(q);
         if ~exist('b','var')
@@ -36,14 +40,33 @@ for i=1:size(files)
         %record(q).error_holdout = norm(A_holdout * x_train - b_holdout);
         %record(q).error = norm(A * x_train - b);
         
-        plot(times,sum(abs(delta_holdout),1)/n,'g')
+        subplot(1,2,1)
+        filename = strrep(file.name, '_', ' ');
+        if q==1
+            plot(log(times),sum(abs(delta_holdout),1)/n,color,...
+                'DisplayName',filename(1:end-4))
+        else
+            plot(log(times),sum(abs(delta_holdout),1)/n,color,...
+                'HandleVisibility','off')
+        end
         hold on;
-        plot(times,error_hist_holdout/n,'k')
+        subplot(1,2,2)
+        plot(log(times),error_hist_holdout/n,color,...
+            'HandleVisibility','off')
 %         hold on;
 %         plot(times,error_hist_train,'b')
 %         plot(times,error_hist,'r')
+        hold on;
     end
 end
+subplot(1,2,1)
+ylabel(sprintf('%d-fold CV holdout error (L1)',k))
+xlabel('CPU time (minutes)')
+legend('toggle')
+subplot(1,2,2)
+title('')
+ylabel(sprintf('%d-fold CV holdout error (L2)',k))
+xlabel('CPU time (minutes)')
 
 
 %% load data
