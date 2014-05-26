@@ -121,6 +121,13 @@ def U(block_sizes):
     pass
 
 def lsv_operator(A, N):
+    """Computes largest singular value of AN
+    
+    Computation is done without computing AN or (AN)^T(AN)
+    by using functions that act as these linear operators on a vector
+    """
+
+    # Build linear operator for AN
     def matmuldyad(v):
         return A.dot(N.dot(v))
 
@@ -128,6 +135,7 @@ def lsv_operator(A, N):
         return N.T.dot(A.T.dot(v))
     normalized_lin_op = scipy.sparse.linalg.LinearOperator((A.shape[0], N.shape[1]), matmuldyad, rmatmuldyad)
 
+    # Given v, computes (N^TA^TAN)v
     def matvec_XH_X(v):
         return normalized_lin_op.rmatvec(normalized_lin_op.matvec(v))
 
@@ -136,9 +144,12 @@ def lsv_operator(A, N):
     maxiter=None
     return_singular_vectors=False
 
+    # Builds linear operator object
     XH_X = scipy.sparse.linalg.LinearOperator(matvec=matvec_XH_X, dtype=A.dtype, shape=(N.shape[1], N.shape[1]))
+    # Computes eigenvalues of (N^TA^TAN), the largest of which is the LSV of AN
     eigvals = sla.eigs(XH_X, k=1, tol=0, maxiter=None, ncv=10, which=which, v0=v0, return_eigenvectors=False)
     lsv = np.sqrt(eigvals)
+    # Take largest one
     return lsv[0].real
 
 def timer(func, number= 1):
