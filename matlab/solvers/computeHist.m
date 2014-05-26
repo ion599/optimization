@@ -18,7 +18,7 @@ r = r/sum(f);
 d2(1) = r;
 
 for i=1:lenHist
-    if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
+    if strcmp(test,'z') || strcmp(test,'dense-z')
         x = x0+N2*hist(:,i);
     else
         x = hist(:,i);

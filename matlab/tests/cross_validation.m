@@ -1,39 +1,32 @@
 %% Cross-validation script
+setup_params
 
 %% Configuration
-% test = 'x';
-test = 'z';
+test = 'x';
+% test = 'z';
 % test = 'dense-z';
 
 % method = 'BB';
 method = 'LBFGS';
 
-noise = 0.2; % sets noise level
-k = 10; % k-fold cv
-
-tag = sprintf('CV 10-fold %s-%s noise=%0.1f',method,test,noise);
-
-% Preprocessing U to Nf
-% for i=1:102720 N(i)=sum(U(i,:)); end
+noise = 0.0; % sets noise level
+k = 3; % k-fold cv
 
 % select data input
-load('data/smaller_data.mat')
-% load('data/stevesSmallData.mat')
-% load('data/stevesData.mat')
+data_file = 'smaller_data';
+% data_file = 'stevesSmallData';
+% data_file = 'stevesData';
 
-% hashmap to store errors
-if exist('data/cv_results_smaller_data5.mat','file')
-    load('data/cv_results_smaller_data5');
-end
-if ~exist('results','var')
-    results = containers.Map();
-    save('data/cv_results_smaller_data5','results');
-end
+tag = sprintf('CV %i-fold %s-%s noise=%0.1f',k,method,test,noise);
+load(sprintf('%s/%s.mat', DATA_DIR, data_file))
 
 %% Initialization
 % Dimensions of the problem
 n = size(A,2);
 m = size(A,1);
+
+% Preprocessing U to Nf
+% for i=1:102720 N(i)=sum(U(i,:)); end
 
 lenN = length(N);
 assert(sum(N) == n) % Check that nullspace N accounts for number of routes
@@ -63,11 +56,11 @@ bn = b+normrnd(0,noise,m,1);
 
 %% Set up cross-validation
 % Requires bioinformatics toolbox
-% Indices = crossvalind('Kfold', n, k);
-Indices = ones(m,1);
+% indices = crossvalind('Kfold', n, k);
+indices = ones(m,1);
 temp = randperm(m,m);
 for i=1:k-1
-    Indices(temp>i*m/k & temp<=(i+1)*m/k) = i+1;
+    indices(temp>i*m/k & temp<=(i+1)*m/k) = i+1;
 end
 
 %% Set Optimization Options
@@ -77,11 +70,13 @@ gOptions.suffDec = .3;
 gOptions.corrections = 500; % Number of corrections to store for L-BFGS methods
 
 %% k-fold cross validation
-record = struct
+record = struct;
 for q=1:k
     % Train
-    b_train = bn(Indices~=q);
-    A_train = A(Indices~=q,:);
+    b_train = bn(indices~=q);
+    A_train = A(indices~=q,:);
+    b_holdout = bn(indices==q);
+    A_holdout = A(indices==q,:);
 
     %% Set up optimization problem
     if strcmp(test,'z')
@@ -128,6 +123,8 @@ for q=1:k
     end
     
     %% Record
+    record(q).indices = indices;
+    record(q).data_file = data_file;
     record(q).timeCPU = timeCPU;
     record(q).times = times;
     record(q).hist = hist;
@@ -143,6 +140,7 @@ for q=1:k
 
     % Test
     record(q).error_train = norm(A_train * x_train - b_train);
+    record(q).error_holdout = norm(A_holdout * x_train - b_holdout);
     record(q).error = norm(A * x_train - b);
 
     fprintf(['%d norm(A_train*x_train-b_train): %8.5e\n',...
@@ -150,23 +148,12 @@ for q=1:k
         record(q).error_train, record(q).error, norm(A*x_init-b));
 end
 
-results(tag) = record;
-save('data/cv_results_smaller_data5','results');
+%% Save results
+if ~exist(DATA_CV_DIR,'dir')
+    mkdir(DATA_CV_DIR);
+end
+result = record;
+save_name = strrep(tag, ' ', '_');
+save(sprintf('%s/%s.mat', DATA_CV_DIR, save_name), 'result');
 
-WarnWave = 0.1 * [sin(1:.6:400), sin(1:.7:400), sin(1:.4:400)];
-Audio = audioplayer(repmat(WarnWave,1,10), 22050);
-play(Audio);
-
-% 2.7564  104.4283 | cv_10-fold_LBFGSz_noise0
-% 2.8614  120.4514
-% 2.9276  119.8896
-
-% 13.3768  136.0122 | cv_10-fold_BBz_noise0
-% 9.2688  136.6618 | cv_10-fold_LBFGSx_noise0
-% 31.9126  124.5516 | cv_10-fold_BBx_noise0
-
-% 4.1931  146.0264 | cv_10-fold_LBFGSz_noise02
-% 13.4403  130.4493 | cv_10-fold_BBz_noise02
-% 9.2850  116.4020 | cv_10-fold_LBFGSx_noise02
-% 10.2494  120.4671
-% 34.7648  141.9519 | cv_10-fold_BBx_noise02
+alert; % alert when finished

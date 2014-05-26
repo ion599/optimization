@@ -74,7 +74,7 @@ for i = 1:maxIter
             ym = [ym y(1:n)];
             sm = [sm s(1:n)-s(n+1:end)];
             rhom = [rhom (y(1:n)'*(s(1:n)-s(n+1:end)))^-1];
-            d = lbfgs(y(1:n), s(1:n)-s(n+1:end), g(1:n), ym, sm, rhom, corrections);
+            d = lbfgsHelper(y(1:n), s(1:n)-s(n+1:end), g(1:n), ym, sm, rhom, corrections);
             d = [d;-d];
             
         end
@@ -192,7 +192,7 @@ for i = 1:maxIter
         break;
     end
     
-    if mod(i,50)==0
+    if mod(i,10)==0
         e = cputime-time;
         timehist = [timehist, e];
         hist = [hist, w(1:n)-w(n+1:end)];

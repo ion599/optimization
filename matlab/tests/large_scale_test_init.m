@@ -1,31 +1,34 @@
 %% Generate Some Synthetic Data
 clc; clear all
+setup_params
 
-%test = 'sparseObjX';
-test = 'sparseObjZ';
-%test = 'objZ';
+% test = 'x';
+test = 'z';
+% test = 'dense-z';
 
 noise = 0.0; % sets noise level
 
-% Preprocessing U to Nf
-% for i=1:102720 N(i)=sum(U(i,:)); end
-
 % select data input
-load('data/smaller_data.mat')
-% load('data/stevesSmallData.mat')
-% load('data/stevesData.mat')
+data_file = 'smaller_data';
+% data_file = 'stevesSmallData';
+% data_file = 'stevesData';
+
+load(sprintf('%s/%s.mat', DATA_DIR, data_file))
 
 %% Initialization
 % Dimensions of the problem
 n = size(A,2);
 m = size(A,1);
 
+% Preprocessing U to Nf
+% for i=1:102720 N(i)=sum(U(i,:)); end
+
 lenN = length(N);
 assert(sum(N) == n) % Check that nullspace N accounts for number of routes
 x_true = x;
 z_true = x2z(x_true,N);
 
-%% Generate initial points
+% Generate initial points
 fprintf('Generate initialization points\n\n')
 % 1: random
 % 2: by importance (cheating-ish)
@@ -34,22 +37,22 @@ fprintf('Generate initialization points\n\n')
 [x_init1,x_init2,x_init3,x_init4,z_init1,z_init2,z_init3,z_init4] = ...
     initXZ(n,N,x_true);
 
-%% Compute sparse matrices
+% Compute sparse matrices
 fprintf('Compute sparse x0 and sparse N\n')
 [x0,N2] = computeSparseParam(n,N);
 
 %% Set up optimization problem
 alpha = (100*(noise^2)*(noise>.1))*(1-x_init2);
 b2 = b+normrnd(0,noise,m,1);
-if strcmp(test,'sparseObjZ')
+if strcmp(test,'z')
     funObj = @(z)objectiveSparse(z,A,N2,x0,b2,zeros(n,1)); % no penalization (L2)
     funObj2 = @(z)objectiveSparse(z,A,N2,x0,b2,alpha);
     funProj = @(z)zProject(z,N);
-elseif strcmp(test,'objZ')
+elseif strcmp(test,'dense-z')
     funObj = @(z)objective(z,A,N,b2,zeros(n,1)); % no penalization (L2)
     funObj2 = @(z)objective(z,A,N,b2,alpha);
     funProj = @(z)zProject(z,N);
-elseif strcmp(test,'sparseObjX')
+elseif strcmp(test,'x')
     funObj = @(x)objectiveX(x,A,b2,zeros(n,1));
     funObj2 = @(x)objectiveX(x,A,b2,alpha);
     funProj = @(x)xProject(x,N);
@@ -67,6 +70,7 @@ options = gOptions;
 %
 
 fprintf('\nl-BFGS\n\n');
+
 tic; t = cputime;
 init = z_init1;
 [zLBFGS1,histLBFGS1,timesLBFGS1] = lbfgs2(funObj,funProj,init,options);
@@ -87,7 +91,7 @@ init = z_init4;
 [zLBFGS4,histLBFGS4,timesLBFGS4] = lbfgs2(funObj,funProj,init,options);
 timeLBFGS4 = toc; timeLBFGSCPU4 = cputime - t;
 
-if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
+if strcmp(test,'z') || strcmp(test,'dense-z')
     xLBFGS1 = x0+N2*zLBFGS1;
     xLBFGS2 = x0+N2*zLBFGS2;
     xLBFGS3 = x0+N2*zLBFGS3;
@@ -123,7 +127,7 @@ if noise>0.1
     [zLBFGS4R,histLBFGS4R,timesLBFGS4R] = lbfgs2(funObj2,funProj,init,options);
     timeLBFGS4R = toc; timeLBFGSCPU4R = cputime - t;
 
-    if strcmp(test,'sparseObjZ') || strcmp(test,'objZ')
+    if strcmp(test,'z') || strcmp(test,'dense-z')
         xLBFGS1R = x0+N2*zLBFGS1R;
         xLBFGS2R = x0+N2*zLBFGS2R;
         xLBFGS3R = x0+N2*zLBFGS3R;
@@ -136,40 +140,6 @@ if noise>0.1
     end
 end
 
-%% Display performance
-%
-fprintf('\nProjected gradient without l2-regularization\n\n');
-
-fprintf(['norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: ' ...
-    '%.2f\nmax|x_init-x_true|: %.2f\n\n\n'], ...
-    norm(A*xSPG-b), norm(A*x_init-b), max(abs(xSPG-x_true)), ...
-    max(abs(x_true-x_init)))
-
-fprintf('\nLBFGS without l2-regularization\n\n');
-
-fprintf(['norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: ' ...
-    '%.2f\nmax|x_init-x_true|: %.2f\n\n\n'], ...
-    norm(A*xLBFGS-b), norm(A*x_init-b), max(abs(xLBFGS-x_true)), ...
-    max(abs(x_true-x_init)))
-
-if noise > 0.1
-    
-    fprintf('\nProjected gradient with l2-regularization\n\n');
-    
-    fprintf(['norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|'...
-        ': %.2f\nmax|x_init-x_true|: %.2f\n\n\n'], ...
-        norm(A*xSPG2-b), norm(A*x_init-b), max(abs(xSPG2-x_true)), ...
-        max(abs(x_true-x_init)))
-    
-    fprintf('\nLBFGS with l2-regularization\n\n');
-    
-    fprintf(['norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|'...
-        ': %.2f\nmax|x_init-x_true|: %.2f\n\n\n'], ...
-        norm(A*xLBFGS2-b), norm(A*x_init-b), max(abs(xLBFGS2-x_true)), ...
-        max(abs(x_true-x_init)))
-    
-end
-%
 %% Display results
 %{
 blocks = [];
@@ -201,15 +171,16 @@ for i=1:lenN
     f(i) = max(A(:,k));
     k = k+N(i);
 end
+% test,x0,N2,hist,timehist,initx,x_true,N,f,A,b
 
 [fLBFGS1,deltaLBFGS1,delta2LBFGS1] = computeHist(test,x0,N2,histLBFGS1,...
-    x_true,N,f,A,b);
+    timesLBFGS1,x_init1,x_true,N,f,A,b);
 [fLBFGS2,deltaLBFGS2,delta2LBFGS2] = computeHist(test,x0,N2,histLBFGS2,...
-    x_true,N,f,A,b);
+    timesLBFGS2,x_init2,x_true,N,f,A,b);
 [fLBFGS3,deltaLBFGS3,delta2LBFGS3] = computeHist(test,x0,N2,histLBFGS3,...
-    x_true,N,f,A,b);
+    timesLBFGS3,x_init3,x_true,N,f,A,b);
 [fLBFGS4,deltaLBFGS4,delta2LBFGS4] = computeHist(test,x0,N2,histLBFGS4,...
-    x_true,N,f,A,b);
+    timesLBFGS4,x_init4,x_true,N,f,A,b);
 if noise > 0.1
     [fLBFGS1R,deltaLBFGS1R,delta2LBFGS1R] = computeHist(test,x0,N2,...
         histLBFGS1R,x_true,N,f,A,b);
@@ -306,21 +277,20 @@ end
 
 figure;
 
-plot(cumsum(timesLBFGS1)/60,log(fLBFGS1),'b')
+plot([0 cumsum(timesLBFGS1)/60],log(fLBFGS1),'b')
 title('Objective value vs. time');
 xlabel('Elapsed time (minutes)');
 ylabel('log f value');
 hold on
-plot(cumsum(timesLBFGS2)/60,log(fLBFGS2),'r')
-% plot(cumsum(timesLBFGS3)/60,fLBFGS3,'g')
-plot(cumsum(timesLBFGS4)/60,log(fLBFGS4),'k')
+plot([0 cumsum(timesLBFGS2)/60],log(fLBFGS2),'r')
+% plot([0 cumsum(timesLBFGS3)/60],fLBFGS3,'g')
+plot([0 cumsum(timesLBFGS4)/60],log(fLBFGS4),'k')
 if noise > 0.1
+    plot([0 cumsum(timesLBFGS1R)/60],fLBFGS1R,'b--')
     hold on
-    plot(cumsum(timesLBFGS1)/60,fLBFGS1R,'b--')
-    hold on
-    plot(cumsum(timesLBFGS2)/60,fLBFGS2R,'r--')
-%     plot(cumsum(timesLBFGS3)/60,fLBFGS3R,'g--')
-    plot(cumsum(timesLBFGS4)/60,fLBFGS4R,'k--')
+    plot([0 cumsum(timesLBFGS2R)/60],fLBFGS2R,'r--')
+%     plot([0 cumsum(timesLBFGS3R)/60],fLBFGS3R,'g--')
+    plot([0 cumsum(timesLBFGS4R)/60],fLBFGS4R,'k--')
     legend(s1,s2,s3,s4,s5,s6,s7,s8)
 else
     legend(s1,s2,s4)
@@ -328,21 +298,20 @@ end
 
 figure;
 
-plot(cumsum(timesLBFGS1)/60,deltaLBFGS1,'b')
+plot([0 cumsum(timesLBFGS1)/60],deltaLBFGS1,'b')
 title('|x-xtrue| vs. time');
 xlabel('Elapsed time (minutes)');
 ylabel('norm');
 hold on
-plot(cumsum(timesLBFGS2)/60,deltaLBFGS2,'r')
-plot(cumsum(timesLBFGS3)/60,deltaLBFGS3,'g')
-plot(cumsum(timesLBFGS4)/60,deltaLBFGS4,'k')
+plot([0 cumsum(timesLBFGS2)/60],deltaLBFGS2,'r')
+plot([0 cumsum(timesLBFGS3)/60],deltaLBFGS3,'g')
+plot([0 cumsum(timesLBFGS4)/60],deltaLBFGS4,'k')
 if noise > 0.1
+    plot([0 cumsum(timesLBFGS1R)/60],deltaLBFGS1R,'b--')
     hold on
-    plot(cumsum(timesLBFGS1)/60,deltaLBFGS1R,'b--')
-    hold on
-    plot(cumsum(timesLBFGS2)/60,deltaLBFGS2R,'r--')
-    plot(cumsum(timesLBFGS3)/60,deltaLBFGS3R,'g--')
-    plot(cumsum(timesLBFGS4)/60,deltaLBFGS4R,'k--')
+    plot([0 cumsum(timesLBFGS2R)/60],deltaLBFGS2R,'r--')
+    plot([0 cumsum(timesLBFGS3R)/60],deltaLBFGS3R,'g--')
+    plot([0 cumsum(timesLBFGS4R)/60],deltaLBFGS4R,'k--')
     legend(s1,s2,s3,s4,s5,s6,s7,s8)
 else
     legend(s1,s2,s3,s4)
@@ -350,21 +319,20 @@ end
 
 figure;
 
-plot(cumsum(timesLBFGS1)/60,delta2LBFGS1,'b')
+plot([0 cumsum(timesLBFGS1)/60],delta2LBFGS1,'b')
 title('f*|x-xtrue| vs. time');
 xlabel('Elapsed time (minutes)');
 ylabel('norm');
 hold on
-plot(cumsum(timesLBFGS2)/60,delta2LBFGS2,'r')
-plot(cumsum(timesLBFGS3)/60,delta2LBFGS3,'g')
-plot(cumsum(timesLBFGS4)/60,delta2LBFGS4,'k')
+plot([0 cumsum(timesLBFGS2)/60],delta2LBFGS2,'r')
+plot([0 cumsum(timesLBFGS3)/60],delta2LBFGS3,'g')
+plot([0 cumsum(timesLBFGS4)/60],delta2LBFGS4,'k')
 if noise > 0.1
+    plot([0 cumsum(timesLBFGS1R)/60],delta2LBFGS1R,'b--')
     hold on
-    plot(cumsum(timesLBFGS1)/60,delta2LBFGS1R,'b--')
-    hold on
-    plot(cumsum(timesLBFGS2)/60,delta2LBFGS2R,'r--')
-    plot(cumsum(timesLBFGS3)/60,delta2LBFGS3R,'g--')
-    plot(cumsum(timesLBFGS4)/60,delta2LBFGS4R,'k--')
+    plot([0 cumsum(timesLBFGS2R)/60],delta2LBFGS2R,'r--')
+    plot([0 cumsum(timesLBFGS3R)/60],delta2LBFGS3R,'g--')
+    plot([0 cumsum(timesLBFGS4R)/60],delta2LBFGS4R,'k--')
     legend(s1,s2,s3,s4,s5,s6,s7,s8)
 else
     legend(s1,s2,s3,s4)

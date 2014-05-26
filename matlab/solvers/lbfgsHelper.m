@@ -1,4 +1,4 @@
-function d = lbfgs(y, s, g, ym, sm, rhom, m)
+function d = lbfgsHelper(y, s, g, ym, sm, rhom, m)
 
 alpha = zeros(1,m);
 

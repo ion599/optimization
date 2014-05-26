@@ -166,7 +166,7 @@ for i = 1:maxIter
         end
         break;
     end
-    if mod(i,50)==0
+    if mod(i,10)==0
         e = cputime-time;
         timehist = [timehist, e];
         hist = [hist, w(1:n)-w(n+1:end)];
