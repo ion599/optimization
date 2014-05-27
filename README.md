@@ -1,6 +1,5 @@
-Convex optimization for traffic demand estimation
-====================
-
+Convex optimization for traffic assignment
+==========================================
 
 Setup
 -----
@@ -9,15 +8,15 @@ Python dependencies (once only):
     sudo easy_install pip
     pip install -r requirements.txt
 
-Matlab dependencies (must be run every time):
+MATLAB dependencies (must be run every time MATLAB is started):
 
     setup.m
 
-Running
------
+Running via MATLAB
+-------------------
 Run `main.m`.
 
-Python Instructions
+Running via Python
 -------------------
 To run, cd into the `traffic-estimation/python` directory, and run the `main.py`
 script:
@@ -27,18 +26,6 @@ python2 main.py ../data/stevesSmallData.mat --log=DEBUG
 ```
 If the dataset you want to run is not in the data directory, symlink it in
 from the main dataset.
-
-Troubleshooting
---------
-See if the examples provided by L1General run:
-
-Compile mex files (not necessary on all systems): `mexAll`                
-
-Runs a demo of the (older) L1General codes: `example_L1General`
-
-Runs a demo of the (newer) L1General codes: `demo_L1General`
-
-Runs a demo of computing a regularization path: `demo_L1Generalpath`
 
 References
 --------
