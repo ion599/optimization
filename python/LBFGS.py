@@ -74,6 +74,8 @@ def solve(x, f, nabla_f, stopping, m=10, proj=None, options=None):
         rho_new = 1 / (y_new.dot(s_new))
         x = x_next
 
+        if proj:
+            x = proj(x)
         fx = f(x)
         stop = stopping(g,fx,it,t,options)
     return x
