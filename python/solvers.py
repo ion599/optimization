@@ -33,5 +33,5 @@ def qp2(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None, \
     else:
         print "'block_sizes' parameter required"
 
-def least_squares(linop, linop_transpose, target, projection, initial, diagnostics):
-    return dore.solve(linop, linop_transpose, target, projection, initial, diagnostics, i = 200)
+def least_squares(linop, linop_transpose, target, projection, initial, diagnostics=None, options=None):
+    return dore.solve(linop, linop_transpose, target, projection, initial, diagnostics=diagnostics,options=options)
