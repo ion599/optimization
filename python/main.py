@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import argparse
 import logging
 import operator
-import BB
+import BB, LBFGS
 
 ACCEPTED_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'WARN']
 
@@ -21,7 +21,7 @@ def main():
                         default='data/stevesSmallData.mat')
     parser.add_argument('--log', dest='log', nargs='?', const='INFO',
             default='WARN', help='Set log level (default: WARN)')
-    parser.add_argument('--solver',dest='solver',type=str,default='BB',
+    parser.add_argument('--solver',dest='solver',type=str,default='LBFGS',
             help='Solver name')
     args = parser.parse_args()
     if args.log in ACCEPTED_LOG_LEVELS:
@@ -45,7 +45,7 @@ def main():
 
     progress = {}
 
-    options = { 'max_iter': 10,
+    options = { 'max_iter': 1000,
                 'verbose': 1,
                 'suff_dec': 0.003,
                 'corrections': 500 }
@@ -62,7 +62,11 @@ def main():
 
     proj = lambda x: simplex_projection(block_sizes - 1,x)
     z0 = np.zeros(N.shape[1])
-    if args.solver == 'BB':
+    if args.solver == 'LBFGS':
+        logging.debug('Starting LBFGS solver...')
+        x = LBFGS.solve(z0 + 1, f, nabla_f, solvers.stopping, proj=proj, options=options)
+        logging.debug('Stopping LBFGS solver...')
+    elif args.solver == 'BB':
         logging.debug('Starting BB solver...')
         x = BB.solve(z0, f, nabla_f, solvers.stopping, proj=proj, options=options)
         logging.debug('Stopping BB solver...')
