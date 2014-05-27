@@ -10,8 +10,8 @@ def solve(linop, linop_T, target, projection, initial, diagnostics = None, optio
     # override defaults
     if options and 'max_iter' in options:
         i = options['max_iter']
-    if options and 'suff_dec' in options:
-        eps = options['suff_dec']
+    if options and 'opt_tol' in options:
+        eps = options['opt_tol']
 
     x = np.squeeze(np.asarray(target))
     y = np.squeeze(np.asarray(initial))

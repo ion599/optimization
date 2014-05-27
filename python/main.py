@@ -64,7 +64,7 @@ def main():
     z0 = np.zeros(N.shape[1])
     if args.solver == 'BB':
         logging.debug('Starting BB solver...')
-        x = BB.solve(z0, f, nabla_f, proj, options)
+        x = BB.solve(z0, f, nabla_f, solvers.stopping, proj=proj, options=options)
         logging.debug('Stopping BB solver...')
     elif args.solver == 'DORE':
 
