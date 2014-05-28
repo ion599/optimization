@@ -15,7 +15,7 @@ import BB, LBFGS
 
 ACCEPTED_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'WARN']
 
-def main():
+def parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', help='Data file (*.mat)',
                         default='data/stevesSmallData.mat')
@@ -23,11 +23,15 @@ def main():
             default='WARN', help='Set log level (default: WARN)')
     parser.add_argument('--solver',dest='solver',type=str,default='LBFGS',
             help='Solver name')
-    args = parser.parse_args()
+    return parser
+
+def main():
+    p = parser()
+    args = p.parse_args()
     if args.log in ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
-    # load data
 
+    # load data
     A, b, N, block_sizes, x_true = load_data(args.file)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
@@ -44,15 +48,10 @@ def main():
     x0 = util.block_e(block_sizes - 1, block_sizes)
     target = b-np.squeeze(A.dot(x0))
 
-    progress = {}
-
-    options = { 'max_iter': 15,
+    options = { 'max_iter': 500,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
-
-    def diagnostics(value, iter_):
-        progress[iter_] = la.norm(A.dot(N.dot(value)) - target, 2)
 
     # small optimization
     AN = A.dot(N)
@@ -74,6 +73,11 @@ def main():
                 proj=proj, options=options)
         logging.debug('Stopping BB solver...')
     elif args.solver == 'DORE':
+        progress = {}
+
+        def diagnostics(value, iter_):
+            progress[iter_] = la.norm(A.dot(N.dot(value)) - target, 2)
+
 
         lsv = util.lsv_operator(A, N)
         logging.info("Largest singular value: %s" % lsv)

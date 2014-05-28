@@ -9,8 +9,8 @@ test = 'z';
 noise = 0.0; % sets noise level
 
 % select data input
-data_file = 'smaller_data';
-% data_file = 'stevesSmallData';
+% data_file = 'smaller_data';
+data_file = 'stevesSmallData';
 % data_file = 'stevesData';
 
 load(sprintf('%s/%s.mat', DATA_DIR, data_file))
@@ -59,7 +59,7 @@ elseif strcmp(test,'x')
 end
 
 %% Set Optimization Options
-gOptions.maxIter = 2000;
+gOptions.maxIter = 550;
 gOptions.verbose = 1; % Set to 0 to turn off output
 gOptions.suffDec = .3;
 gOptions.corrections = 500; % Number of corrections to store for L-BFGS methods
