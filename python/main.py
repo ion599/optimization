@@ -45,7 +45,7 @@ def main():
 
     progress = {}
 
-    options = { 'max_iter': 1000,
+    options = { 'max_iter': 15,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
@@ -64,8 +64,10 @@ def main():
     z0 = np.zeros(N.shape[1])
     if args.solver == 'LBFGS':
         logging.debug('Starting LBFGS solver...')
-        x = LBFGS.solve(z0 + 1, f, nabla_f, solvers.stopping, proj=proj, options=options)
+        iters,times,state = LBFGS.solve(z0 + 1, f, nabla_f, solvers.stopping, proj=proj, options=options)
         logging.debug('Stopping LBFGS solver...')
+        import ipdb
+        ipdb.set_trace()
     elif args.solver == 'BB':
         logging.debug('Starting BB solver...')
         x = BB.solve(z0, f, nabla_f, solvers.stopping, proj=proj, options=options)

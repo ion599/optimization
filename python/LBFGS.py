@@ -1,11 +1,14 @@
 import numpy as np
 import numpy.linalg as la
+import time
 
 # Weak Wolfe line search
 # t: step size
 # d: search direction
 # x: current position
 def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
+    # TODO projected version is much slower but doesn't seem to aid performance?
+
     alpha, beta = 0, float('inf')
     t = 1
     stop = False
@@ -32,7 +35,7 @@ def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
     return t
 
 # Limited memory BFGS
-def solve(x, f, nabla_f, stopping, m=10, proj=None, options=None):
+def solve(x, f, nabla_f, stopping, m=10,record_every=5,proj=None,options=None):
     # FIXME has issues when x == 0 to start
 
     def search_dir(g_new,y_new,s_new,rho,y,s,m=10):
@@ -49,15 +52,19 @@ def solve(x, f, nabla_f, stopping, m=10, proj=None, options=None):
             r = r + s[i] * (alpha[i] - beta)
         return -r
 
+    # Save initial state
+    iters,times,state = [0],[0],[x]
+    start = time.time()
+
     # Initializations
-    it,stop = 0,False
+    i,stop = 0,False
     n = x.shape[0]
     y, s = [np.zeros((n))]*m, [np.zeros((n))]*m
     g_new = nabla_f(x)
     y_new, s_new = g_new, np.ones((n))
     rho, rho_new = [0]*m, 1 / (y_new.dot(s_new))
     while not stop:
-        it+=1
+        i+=1
         d = search_dir(g_new,y_new,s_new,rho,y,s,m=m)
         # update history
         y.pop(0)
@@ -80,5 +87,17 @@ def solve(x, f, nabla_f, stopping, m=10, proj=None, options=None):
 
         x = x_next
         fx = f(x)
-        stop = stopping(g_new,fx,it,t,options)
-    return x
+        stop = stopping(g_new,fx,i,t,options)
+
+        # Save intermediate state
+        if i % record_every == 0:
+            iters.append(i)
+            times.append(time.time() - start)
+            start = time.time()
+            state.append(x)
+
+    # Save final state
+    iters.append(i)
+    times.append(time.time() - start)
+    state.append(x)
+    return (iters,times,state)
