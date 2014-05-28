@@ -5,21 +5,24 @@ import numpy.linalg as la
 # t: step size
 # d: search direction
 # x: current position
-def weak_wolfe_ls(x,d,f,nabla_f,c1=1e-3,c2=0.9):
+def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
     alpha, beta = 0, float('inf')
     t = 1
     stop = False
     # bisection method
     # https://www.math.washington.edu/~burke/crs/408/notes/nlp/line.pdf [Page 8]
+    proj_x = proj(x)
+    nabla_fx = nabla_f(proj_x)
     while not stop:
+        proj_xtd = proj(x + t*d)
+
         # armijo condition violated
-        nabla_fx = nabla_f(x)
-        if f(x + t*d) > f(x) + c1 * t * d.dot(nabla_fx):
+        if f(proj_xtd) > f(proj_x) + c1 * t * d.dot(nabla_fx):
             # print 'ar', alpha, beta, t
             beta = t
             t = 0.5 * (alpha + beta)
         # curvature condition violated
-        elif d.dot(nabla_f(x + t*d)) < c2 * d.dot(nabla_fx):
+        elif d.dot(nabla_f(proj_xtd)) < c2 * d.dot(nabla_fx):
             # print 'cc', alpha,beta, t
             alpha = t
             t = 2 * alpha if beta == float('inf') else 0.5*(alpha+beta)
@@ -65,17 +68,17 @@ def solve(x, f, nabla_f, stopping, m=10, proj=None, options=None):
         rho.append(rho_new)
 
         # update position
-        t = weak_wolfe_ls(x,d,f,nabla_f)
+        t = weak_wolfe_ls(x,d,f,nabla_f,proj=proj)
         s_new = t * d
         x_next = x + s_new
-        g = nabla_f(x)
+        if proj:
+            x_next = proj(x_next)
+        g = g_new
         g_new = nabla_f(x_next)
         y_new = g_new - g 
         rho_new = 1 / (y_new.dot(s_new))
-        x = x_next
 
-        if proj:
-            x = proj(x)
+        x = x_next
         fx = f(x)
-        stop = stopping(g,fx,it,t,options)
+        stop = stopping(g_new,fx,it,t,options)
     return x

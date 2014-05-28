@@ -47,8 +47,8 @@ def main():
 
     options = { 'max_iter': 1000,
                 'verbose': 1,
-                'suff_dec': 0.003,
-                'corrections': 500 }
+                'suff_dec': 0.003, # FIXME unused
+                'corrections': 500 } # FIXME unused
 
     def diagnostics(value, iter_):
         progress[iter_] = la.norm(A.dot(N.dot(value)) - target, 2)
