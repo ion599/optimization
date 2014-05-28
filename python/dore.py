@@ -3,10 +3,16 @@ import scipy.sparse
 from numpy import linalg as la
 import random
 
-def solve(linop, linop_T, target, projection, initial, diagnostics = None, i = 10000, eps = 10**-16):
+def solve(linop, linop_T, target, projection, initial, diagnostics = None, options=None, i = 10000, eps = 10**-16):
     """Solves DORE accelerated least squares via projection
     @param diagnostics is a closure that accepts the current solution and iteration number
     """
+    # override defaults
+    if options and 'max_iter' in options:
+        i = options['max_iter']
+    if options and 'opt_tol' in options:
+        eps = options['opt_tol']
+
     x = np.squeeze(np.asarray(target))
     y = np.squeeze(np.asarray(initial))
     n = initial.shape[0]
