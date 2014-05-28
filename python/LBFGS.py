@@ -45,7 +45,6 @@ def solve(x, f, nabla_f, stopping, m=10,record_every=5,proj=None,options=None):
             alpha[i] = rho[i] * (s[i].dot(q))
             q = q - alpha[i] * y[i]
         H = y_new.dot(s_new) / (y_new.dot(y_new))
-        # H = y[-1].T*s[-1] / (y[-1].T*y[-1])
         r = H * q
         for i in range(0,m):
             beta = rho[i] * y[i].dot(r)

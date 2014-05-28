@@ -29,7 +29,8 @@ def main():
     # load data
 
     A, b, N, block_sizes, x_true = load_data(args.file)
-    sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,'x_true':x_true})
+    sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
+        'x_true':x_true})
 
     x_true = np.squeeze(np.asarray(x_true))
 
@@ -64,13 +65,13 @@ def main():
     z0 = np.zeros(N.shape[1])
     if args.solver == 'LBFGS':
         logging.debug('Starting LBFGS solver...')
-        iters,times,state = LBFGS.solve(z0 + 1, f, nabla_f, solvers.stopping, proj=proj, options=options)
+        iters,times,state = LBFGS.solve(z0 + 1, f, nabla_f, solvers.stopping,
+                proj=proj, options=options)
         logging.debug('Stopping LBFGS solver...')
-        import ipdb
-        ipdb.set_trace()
     elif args.solver == 'BB':
         logging.debug('Starting BB solver...')
-        x = BB.solve(z0, f, nabla_f, solvers.stopping, proj=proj, options=options)
+        iters,times,state  = BB.solve(z0, f, nabla_f, solvers.stopping,
+                proj=proj, options=options)
         logging.debug('Stopping BB solver...')
     elif args.solver == 'DORE':
 
@@ -99,7 +100,8 @@ def main():
         A_dore = None
 
         print 'norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\nCV error: %8.5e\n\n\n' % \
-            (training_error, starting_error, dist_from_true, start_dist_from_true, 0)
+            (training_error, starting_error, dist_from_true,
+            start_dist_from_true, 0)
         plt.figure()
         plt.hist(xDORE)
 
