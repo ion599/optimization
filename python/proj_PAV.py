@@ -2,19 +2,23 @@ from __future__ import division
 from numpy import array, inf, dot, ones, float
 import numpy as np
 import time
+from multiprocessing import Pool
 
-def proj_PAV(y, w, l=-inf, u=inf):
+# def proj_PAV(y, w, l=-inf, u=inf):
+def proj_PAV(s):
     """PAV algorithm with box constraints
     """
+    y, w, l, u = s
 
-    if y.size != w.size:
-        print y
-        print w
-        raise Exception("Shape of y (%s) != shape of w (%d)" % (y.size, w.size))
+    # if y.size != w.size:
+    #     print y
+    #     print w
+    #     raise Exception("Shape of y (%s) != shape of w (%d)" % (y.size, w.size))
 
     n = len(y)
     y = y.astype(float)
-    x=y.copy()
+    # x=y.copy()
+    x=y
 
     if n==2:
         if y[0]>y[1]:
@@ -36,16 +40,21 @@ def proj_PAV(y, w, l=-inf, u=inf):
         for i in xrange(len(j)-1):
             x[j[i]:j[i+1]] = weighted_block_avg(y,w,j,i)*ones(j[i+1]-j[i])
 
-    x[np.where(x < l)] = l
-    x[np.where(x > u)] = u
+    return np.maximum(l,np.minimum(u,x))
 
-    return x
-
-def simplex_projection(block_sizes, x):
-    k = 0
-    for i, block_size in enumerate(block_sizes):
-        x[k:k+block_size] = proj_PAV(x[k:k+block_size],np.ones(block_size),0,1)
-        k += block_size
+def simplex_projection(block_sizes, x, processes=1):
+    ind_end = np.cumsum(block_sizes)
+    ind_start = np.hstack(([0],ind_end[:-1]))
+    if processes == 1:
+        x = np.concatenate([proj_PAV((x[i:j],np.ones(k),0,1)) for i,j,k \
+                in zip(ind_start,ind_end,block_sizes)])
+    else:
+        pool = Pool(processes)
+        everything = [(x[i:j],np.ones(k),0,1) for i,j,k in \
+                zip(ind_start,ind_end,block_sizes)]
+        results = pool.map(proj_PAV, everything, chunksize=25)
+        pool.close()
+        x = np.concatenate(results)
     return x
 
 # weighted average
@@ -64,8 +73,8 @@ Demonstration of the PAV algorithm on a small example."""
     w = array([1,1,1,1,1,1])
     print "y vector", y
     print "weights", w
-    print "solution", proj_PAV(y,w)
-    print "solution with bounds", proj_PAV(y,w,5,7)
+    print "solution", proj_PAV((y,w,-inf,inf))
+    print "solution with bounds", proj_PAV((y,w,5,7))
 
     N = 3*ones(20000)
     w = array([i%5 for i in range(60000)])
