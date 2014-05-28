@@ -67,11 +67,11 @@ Demonstration of the PAV algorithm on a small example."""
     print "solution", proj_PAV(y,w)
     print "solution with bounds", proj_PAV(y,w,5,7)
 
-    N = 3*ones(30000)
+    N = 3*ones(20000)
     w = array([i%5 for i in range(60000)])
     print w[range(20)]
     start = time.clock()
-    w = simplex_projection(w, N - 1)
+    w = simplex_projection(N, w)
     print (time.clock() - start)
     print w[range(20)]
 
