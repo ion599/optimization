@@ -19,10 +19,12 @@ Run `main.m`.
 Running via Python
 -------------------
 To run, cd into the `traffic-estimation/python` directory, and run the `main.py`
-script:
+script. See these examples:
 ```
 cd ~/traffic-estimation/python
-python2 main.py ../data/stevesSmallData.mat --log=DEBUG
+python main.py --file data/stevesSmallData.mat --log=DEBUG --solver LBFGS
+python main.py --file data/stevesSmallData.mat --log=DEBUG --solver BB
+python main.py --file data/stevesSmallData.mat --log=DEBUG --solver DORE
 ```
 If the dataset you want to run is not in the data directory, symlink it in
 from the main dataset.
