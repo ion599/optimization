@@ -2,6 +2,7 @@ from __future__ import division
 from numpy import array, inf, dot, ones, float
 import numpy as np
 import time
+import sys
 from multiprocessing import Pool
 
 # def proj_PAV(y, w, l=-inf, u=inf):
@@ -59,28 +60,25 @@ def simplex_projection(block_sizes, x, processes=1):
 
 # weighted average
 def weighted_block_avg(y,w,j,ind):
-    block = range(j[ind],j[ind+1])
-    #print block
-    wB = w[block]
-    return dot(wB,y[block])/wB.sum()
+    wB = w[j[ind]:j[ind+1]]
+    return dot(wB,y[j[ind]:j[ind+1]])/wB.sum()
 
 # DEMO starts here
 if __name__ == "__main__":
-    print """
-Demonstration of the PAV algorithm on a small example."""
-    print
+    print >> sys.stderr, """Demonstration of the PAV algorithm on a small example."""
+    print >> sys.stderr
     y = array([4,5,1,6,8,7])
     w = array([1,1,1,1,1,1])
-    print "y vector", y
-    print "weights", w
-    print "solution", proj_PAV((y,w,-inf,inf))
-    print "solution with bounds", proj_PAV((y,w,5,7))
+    print >> sys.stderr, "y vector", y
+    print >> sys.stderr, "weights", w
+    print >> sys.stderr, "solution", proj_PAV((y,w,-inf,inf))
+    print >> sys.stderr, "solution with bounds", proj_PAV((y,w,5,7))
 
     N = 3*ones(20000)
     w = array([i%5 for i in range(60000)])
-    print w[range(20)]
+    print >> sys.stderr, w[range(20)]
     start = time.clock()
     w = simplex_projection(N, w)
-    print (time.clock() - start)
-    print w[range(20)]
+    print >> sys.stderr, (time.clock() - start)
+    print >> sys.stderr, w[range(20)]
 
