@@ -6,7 +6,7 @@ import util
 import numpy as np
 import numpy.linalg as la
 from numpy import ones, array
-from proj_PAV import simplex_projection
+from projection import simplex_projection, proj_PAV, proj_l1ball
 import matplotlib.pyplot as plt
 import argparse
 import logging
@@ -60,7 +60,7 @@ def main():
     # f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + A.dot(x0) - b)**2
     # nabla_f = lambda z: N.T.dot(A.T.dot(A.dot(x0+N.dot(z))-b))
 
-    proj = lambda x: simplex_projection(block_sizes - 1,x)
+    proj = lambda x: simplex_projection(block_sizes - 1, proj_PAV, x)
     z0 = np.zeros(N.shape[1])
     if args.solver == 'LBFGS':
         logging.debug('Starting LBFGS solver...')
