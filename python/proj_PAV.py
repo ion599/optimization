@@ -42,6 +42,24 @@ def proj_PAV(s):
 
     return np.maximum(l,np.minimum(u,x))
 
+
+def proj_l1ball(y):
+    """Projection on l1-ball
+    """
+    n, x = len(y), y.copy()
+    x.sort()
+    x = x[::-1]
+    tmp = np.multiply(np.cumsum(x) - 1, [1/n for n in range(1,n+1)])
+    return np.maximum(y - tmp[np.sum(x > tmp)-1],0)
+
+"""
+function X = SimplexProj(Y)
+[N,D] = size(Y);
+X = sort(Y,2,'descend');
+Xtmp = (cumsum(X,2)-1)*diag(sparse(1./(1:D)));
+X = max(bsxfun(@minus,Y,Xtmp(sub2ind([N,D],(1:N)',sum(X>Xtmp,2)))),0);
+"""
+
 def simplex_projection(block_sizes, x, processes=1):
     ind_end = np.cumsum(block_sizes)
     ind_start = np.hstack(([0],ind_end[:-1]))
@@ -75,7 +93,10 @@ Demonstration of the PAV algorithm on a small example."""
     print "weights", w
     print "solution", proj_PAV((y,w,-inf,inf))
     print "solution with bounds", proj_PAV((y,w,5,7))
-
+    
+    print proj_l1ball(array([.5,.2,.9,.5,.2]))
+    
+    """
     N = 3*ones(20000)
     w = array([i%5 for i in range(60000)])
     print w[range(20)]
@@ -83,4 +104,5 @@ Demonstration of the PAV algorithm on a small example."""
     w = simplex_projection(N, w)
     print (time.clock() - start)
     print w[range(20)]
+    """
 
