@@ -60,7 +60,7 @@ def pysimplex_projection(block_sizes, x, processes=1):
     ind_end = np.cumsum(block_sizes)
     ind_start = np.hstack(([0],ind_end[:-1]))
     if processes == 1:
-        x = np.concatenate([projection(x[i:j]) for i,j \
+        x = np.concatenate([proj_PAV(x[i:j], l=0, u=1) for i,j \
                 in zip(ind_start,ind_end)])
     else:
         pool = Pool(processes)
@@ -85,13 +85,13 @@ if __name__ == "__main__":
     w = array([1,1,1,1,1,1])
     print >> sys.stderr, "y vector", y
     print >> sys.stderr, "weights", w
-    print >> sys.stderr, "solution", proj_PAV((y,w,-inf,inf))
+    print >> sys.stderr, "solution", proj_PAV(y,w,-inf,inf)
     tic = time.time()
     for idx in xrange(1000):
-        proj_PAV((y,w,5,7))
+        proj_PAV(y,w,5,7)
     toc = time.time()
     print toc - tic
-    print >> sys.stderr, "solution with bounds", proj_PAV((y,w,5,7))
+    print >> sys.stderr, "solution with bounds", proj_PAV(y,w,5,7)
     tic = time.time()
     for idx in xrange(1000):
         simplex_projection.pav_projection(y,5,7)
