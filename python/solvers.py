@@ -48,7 +48,7 @@ def stopping(g,fx,i,t,options=None,TOLER=1e-6):
 
     norm2_nabla_f = np.square(la.norm(g))
     thresh = TOLER * (1 + abs(fx))
-    if options and 'verbose' in options and options['verbose'] >= 1:
+    if options and 'verbose' in options and options['verbose'] >= 1 and i % 5 == 0:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
     if norm2_nabla_f <= thresh:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))

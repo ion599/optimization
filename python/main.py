@@ -48,7 +48,7 @@ def main():
     x0 = util.block_e(block_sizes - 1, block_sizes)
     target = b-np.squeeze(A.dot(x0))
 
-    options = { 'max_iter': 200,
+    options = { 'max_iter': 500,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused

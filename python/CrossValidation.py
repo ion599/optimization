@@ -19,9 +19,11 @@ import config as c
 
 class CrossValidation:
 
-    def __init__(self,k=3,f=None,solver=None):
+    def __init__(self,k=3,f=None,solver=None,var=None,iters=200):
         self.f=f
         self.solver=solver
+        self.var = var
+        self.iters = iters
         self.k=k
         self.setup()
         self.kf = KFold(self.n,n_folds=k, indices=True)
@@ -47,7 +49,7 @@ class CrossValidation:
             self.block_sizes)
         logging.debug("Blocks: %s" % self.block_sizes.shape)
 
-        self.options = { 'max_iter': 10,
+        self.options = { 'max_iter': self.iters,
                     'verbose': 1,
                     'suff_dec': 0.003, # FIXME unused
                     'corrections': 500 } # FIXME unused
@@ -94,11 +96,10 @@ class CrossValidation:
             d = len(self.state[i])
             b_train,A_train = self.b[train],self.A[train,:]
             b_test,A_test = self.b[test],self.A[test,:]
-            self.x_hat = self.N.dot(np.array(self.state[i]).T) - np.tile(self.x0,(d,1)).T
+            self.x_hat = self.N.dot(np.array(self.state[i]).T) + np.tile(self.x0,(d,1)).T
             logging.debug("Shape of x_hat: %s" % repr(self.x_hat.shape))
 
-
-            starting_error = la.norm(A_train.dot(self.x0)-b_train)
+            starting_error = 0.5 * la.norm(A_train.dot(self.x0)-b_train)
             train_diff = A_train.dot(self.x_hat) - np.tile(b_train,(d,1)).T
             train_error = 0.5 * np.diag(train_diff.T.dot(train_diff))
             self.train_error.append(train_error)
@@ -123,26 +124,37 @@ class CrossValidation:
         self.mean_time = np.mean([np.cumsum(self.times[i])[-1] for i in range(self.k)])
         self.mean_error = np.mean([self.test_error[i][-1] for i in range(self.k)])
 
-    def plot_all(self,subplot=None):
+    # Plot each of the k tests separately
+    def plot_all(self,subplot=None,color='k'):
         if subplot:
             plt.subplot(subplot)
+
         for i in range(self.k):
             times = np.cumsum(self.times[i])
-            plt.plot(times,self.test_error[i])
+            if i == 0:
+                plt.loglog(times,self.test_error[i],color=color,
+                        label='%s-%s' % (self.solver,self.var))
+            else:
+                plt.loglog(times,self.test_error[i],color=color)
+
+            plt.loglog(times,self.train_error[i],color=color,alpha=0.25)
             plt.hold(True)
-        plt.xlabel('CPU time (minutes)')
+        plt.xlabel('CPU time (seconds)')
         plt.ylabel('%d-fold CV holdout error (L2)' % self.k)
         plt.title('CV error')
+        plt.legend(shadow=True)
 
-    def plot(self,subplot=None):
+    # Plot summary dot for this solver
+    def plot(self,subplot=None,color='k'):
         if subplot:
             plt.subplot(subplot)
-        fig, ax = plt.subplots()
-        ax.plot(self.mean_time,self.mean_error,marker='.',label=self.solver)
-        ax.legend(shadow=True)
-        plt.xlabel('CPU time (minutes)')
+
+        plt.plot(self.mean_time,self.mean_error,marker='.',color=color,
+                label='%s-%s' % (self.solver,self.var))
+        plt.xlabel('CPU time (seconds)')
         plt.ylabel('%d-fold CV holdout error (L2)' % self.k)
         plt.title('Average CV error')
+        plt.legend(shadow=True)
 
 if __name__ == "__main__":
     p = parser()
@@ -150,10 +162,16 @@ if __name__ == "__main__":
     if args.log in c.ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
 
-    cv = CrossValidation(k=3,f=args.file,solver=args.solver)
+    cv = CrossValidation(k=3,f=args.file,solver='BB',var='z',iters=40)
     cv.run()
     cv.post_process()
-    cv.plot(subplot=211)
-    cv.plot_all(subplot=212)
-    plt.show()
         
+    cv2 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iters=15)
+    cv2.run()
+    cv2.post_process()
+
+    cv.plot(subplot=211,color='b')
+    cv.plot_all(subplot=212,color='b')
+    cv2.plot(subplot=211,color='m')
+    cv2.plot_all(subplot=212,color='m')
+    plt.show()
