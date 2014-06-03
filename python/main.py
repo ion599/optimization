@@ -12,8 +12,7 @@ import argparse
 import logging
 import operator
 import BB, LBFGS
-
-ACCEPTED_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'WARN']
+import config as c
 
 def parser():
     parser = argparse.ArgumentParser()
@@ -28,7 +27,7 @@ def parser():
 def main():
     p = parser()
     args = p.parse_args()
-    if args.log in ACCEPTED_LOG_LEVELS:
+    if args.log in c.ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # load data

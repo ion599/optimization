@@ -14,10 +14,14 @@ import argparse
 import logging
 import operator
 import BB, LBFGS
+import config as c
+import CrossValidation
 
 def cross_validation(k=3):
     p = parser()
     args = p.parse_args()
+    if args.log in c.ACCEPTED_LOG_LEVELS:
+        logging.basicConfig(level=eval('logging.'+args.log))
 
     # load data
     A, b, N, block_sizes, x_true = load_data(args.file)
@@ -29,7 +33,7 @@ def cross_validation(k=3):
     x0 = util.block_e(block_sizes - 1, block_sizes)
     target = b-np.squeeze(A.dot(x0))
 
-    options = { 'max_iter': 500,
+    options = { 'max_iter': 5,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
@@ -58,7 +62,7 @@ def cross_validation(k=3):
             logging.debug('Stopping LBFGS solver...')
         elif args.solver == 'BB':
             logging.debug('Starting BB solver...')
-            iters,times,state  = BB.solve(z0, f, nabla_f, solvers.stopping,
+            iters,times,state = BB.solve(z0, f, nabla_f, solvers.stopping,
                     proj=proj, options=options)
             logging.debug('Stopping BB solver...')
 
@@ -80,6 +84,13 @@ def cross_validation(k=3):
             (training_error, starting_error, dist_from_true,
             start_dist_from_true, test_error)
     print 'cv error: %8.5e' % np.mean(cv_errors)
+
+def save(self,c):
+    import pickle
+    pickle.dump(self.wp,open('%s/%s' % (c.DATA_DIR,c.WAYPOINTS_FILE),'w'))
+
+def cross_validation_plots():
+    pass
 
 if __name__ == "__main__":
     cross_validation()
