@@ -95,6 +95,7 @@ def load_data(filename):
         A = data['phi']
     else:
         A = data['A']
+    A = A.tocsr()
 
     if data.has_key('b'):
         b = data['b']
@@ -114,6 +115,7 @@ def load_data(filename):
 
     logging.debug('Creating sparse N matrix')
     N = block_sizes_to_N(block_sizes)
+    N = N.tocsr()
 
     logging.debug('File loaded successfully')
 

@@ -6,7 +6,8 @@ import util
 import numpy as np
 import numpy.linalg as la
 from numpy import ones, array
-from projection import simplex_projection, proj_PAV, proj_l1ball
+from c_extensions import simplex_projection
+from projection import pysimplex_projection, proj_PAV, proj_l1ball
 import matplotlib.pyplot as plt
 import argparse
 import logging
@@ -47,24 +48,29 @@ def main():
     x0 = util.block_e(block_sizes - 1, block_sizes)
     target = b-np.squeeze(A.dot(x0))
 
-    options = { 'max_iter': 500,
+    options = { 'max_iter': 200,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
+    AT = A.T.tocsr()
+    NT = N.T.tocsr()
 
-    # small optimization
-    AN = A.dot(N)
-    f = lambda z: 0.5 * la.norm(AN.dot(z) + A.dot(x0) - b)**2
-    nabla_f = lambda z: AN.T.dot(A.dot(x0)+AN.dot(z)-b)
-    # f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + A.dot(x0) - b)**2
-    # nabla_f = lambda z: N.T.dot(A.T.dot(A.dot(x0+N.dot(z))-b))
+    target = A.dot(x0) - b
 
-    proj = lambda x: simplex_projection(block_sizes - 1, proj_PAV, x)
+    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
+    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
+
+    def proj(x):
+        projected_value = simplex_projection.simplex_projection(block_sizes - 1,x)
+        #projected_value = projection.pysimplex_projection(block_sizes - 1,x)
+        return projected_value
+
     z0 = np.zeros(N.shape[1])
     if args.solver == 'LBFGS':
         logging.debug('Starting LBFGS solver...')
         iters,times,state = LBFGS.solve(z0 + 1, f, nabla_f, solvers.stopping,
                 proj=proj, options=options)
+        logging.debug("Took %s time" % str(np.sum(times)))
         logging.debug('Stopping LBFGS solver...')
     elif args.solver == 'BB':
         logging.debug('Starting BB solver...')

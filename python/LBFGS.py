@@ -41,12 +41,12 @@ def solve(x, f, nabla_f, stopping, m=10,record_every=5,proj=None,options=None):
     def search_dir(g_new,y_new,s_new,rho,y,s,m=10):
         q = g_new
         alpha = [0]*m
-        for i in range(m-1,-1,-1):
+        for i in xrange(m-1,-1,-1):
             alpha[i] = rho[i] * (s[i].dot(q))
             q = q - alpha[i] * y[i]
         H = y_new.dot(s_new) / (y_new.dot(y_new))
         r = H * q
-        for i in range(0,m):
+        for i in xrange(0,m):
             beta = rho[i] * y[i].dot(r)
             r = r + s[i] * (alpha[i] - beta)
         return -r
