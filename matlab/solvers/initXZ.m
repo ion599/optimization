@@ -8,7 +8,6 @@ for i=1:lenN
     x1(k+1:k+N(i)) = x1(k+1:k+N(i))/sum(x1(k+1:k+N(i)));
     k = k+N(i);
 end
-z1 = x2z(x1,N);
 
 % Generate x_init2,3 = routes by importance
 % 1: random
@@ -28,6 +27,7 @@ for i=1:lenN
     x4(k+1:k+N(i)) = 1/size(id,1);
     k = k+N(i);
 end
+z1 = x2z(x1,N);
 z2 = x2z(x2,N);
 z3 = x2z(x3,N);
 z4 = x2z(x4,N);

@@ -8,7 +8,7 @@ x2 = PAValgo(y,w,4,7);
 
 x3 = PAValgo(y,w,8,10);
 %}
-
+%{
 N = 3*ones(20000);
 w = zeros(60000);
 for i=1:60000
@@ -17,3 +17,5 @@ end
 tic
 w = zProject(w,N);
 toc
+%}
+SimplexProj([.5,.2,.9,.5,.2])

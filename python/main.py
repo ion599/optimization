@@ -7,7 +7,7 @@ import numpy as np
 import numpy.linalg as la
 from numpy import ones, array
 from c_extensions import simplex_projection
-import proj_PAV
+from projection import pysimplex_projection, proj_PAV, proj_l1ball
 import matplotlib.pyplot as plt
 import argparse
 import logging
@@ -63,7 +63,7 @@ def main():
 
     def proj(x):
         projected_value = simplex_projection.simplex_projection(block_sizes - 1,x)
-        #projected_value = proj_PAV.pysimplex_projection(block_sizes - 1,x)
+        #projected_value = projection.pysimplex_projection(block_sizes - 1,x)
         return projected_value
 
     z0 = np.zeros(N.shape[1])

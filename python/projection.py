@@ -6,11 +6,11 @@ from c_extensions import simplex_projection
 import sys
 from multiprocessing import Pool
 
-# def proj_PAV(y, w, l=-inf, u=inf):
-def proj_PAV(s):
+def proj_PAV(y, w=None, l=0, u=1):
+#def proj_PAV(s):
     """PAV algorithm with box constraints
     """
-    y, w, l, u = s
+    #y, w, l, u = s
 
     # if y.size != w.size:
     #     print y
@@ -18,6 +18,7 @@ def proj_PAV(s):
     #     raise Exception("Shape of y (%s) != shape of w (%d)" % (y.size, w.size))
 
     n = len(y)
+    if w is None: w = np.ones(n)
     y = y.astype(float)
     # x=y.copy()
     x=y
@@ -44,20 +45,32 @@ def proj_PAV(s):
 
     return np.maximum(l,np.minimum(u,x))
 
+
+def proj_l1ball(y):
+    """Projection on l1-ball
+    """
+    n, x = len(y), y.copy()
+    x.sort()
+    x = x[::-1]
+    tmp = np.multiply(np.cumsum(x) - 1, [1/n for n in range(1,n+1)])
+    return np.maximum(y - tmp[np.sum(x > tmp)-1],0)
+
+
 def pysimplex_projection(block_sizes, x, processes=1):
     ind_end = np.cumsum(block_sizes)
     ind_start = np.hstack(([0],ind_end[:-1]))
     if processes == 1:
-        x = np.concatenate([proj_PAV((x[i:j],np.ones(k),0,1)) for i,j,k \
-                in zip(ind_start,ind_end,block_sizes)])
+        x = np.concatenate([projection(x[i:j]) for i,j \
+                in zip(ind_start,ind_end)])
     else:
         pool = Pool(processes)
-        everything = [(x[i:j],np.ones(k),0,1) for i,j,k in \
-                zip(ind_start,ind_end,block_sizes)]
-        results = pool.map(proj_PAV, everything, chunksize=25)
+        everything = [x[i:j] for i,j in \
+                zip(ind_start,ind_end)]
+        results = pool.map(projection, everything, chunksize=25)
         pool.close()
         x = np.concatenate(results)
     return x
+
 
 # weighted average
 def weighted_block_avg(y,w,j,ind):
@@ -86,6 +99,11 @@ if __name__ == "__main__":
     print toc - tic
     print >> sys.stderr, "solution with bounds", simplex_projection.pav_projection(y,5,7)
 
+    print "Demonstration of projection on l1-ball"
+    print "solution with bounds", proj_l1ball(array([.5,.2,.9,.5,.2]))
+    
+    print "Demonstration of simplex projection"
+    
     N = 3*ones(20000)
     w = array([i%5 for i in range(60000)])
     print >> sys.stderr, w[range(20)]

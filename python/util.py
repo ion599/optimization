@@ -73,6 +73,13 @@ def block_sizes_to_N(block_sizes):
         start_col += block_size - 1
     return N.tocsr()
 
+def block_sizes_to_x0(block_sizes):
+    """Converts a list of the block sizes to a scipy.sparse vector x0
+    """
+    x0 = sps.dok_matrix((np.sum(block_sizes),1))
+    for i in np.cumsum(block_sizes)-1: x0[(i,0)] = 1
+    return x0.transpose()
+
 # Convenience functions
 # -----------------------------------------------------------------------------
 
@@ -154,6 +161,7 @@ def lsv_operator(A, N):
     # Take largest one
     return lsv[0].real
 
+
 def timer(func, number= 1):
     '''
     Output the average time
@@ -170,3 +178,57 @@ def timer(func, number= 1):
         total += end - start
 
     return output, total / number
+
+
+def x2z(x, block_sizes):
+    p = len(block_sizes)
+    ind_end = np.cumsum(block_sizes)
+    ind_start = np.hstack(([0],ind_end[:-1]))
+    z = np.concatenate([np.cumsum(x[i:j-1]) for i,j \
+                in zip(ind_start,ind_end) if i<j-1])
+    return z
+
+
+def init_xz(block_sizes, x_true):
+    """Generate initial points
+    1: random
+    2: by importance (cheating-ish)
+    3: 10^importance (cheating-ish)
+    4: uniform
+    """
+    n = np.sum(block_sizes)
+    x1 = np.random.random_sample((n, 1))
+    ind_end = np.cumsum(block_sizes)
+    ind_start = np.hstack(([0],ind_end[:-1]))
+    x1 = np.divide(x1, \
+                   np.concatenate([np.sum(x1[i:j])*np.ones((k,1)) for i,j,k in zip(ind_start,ind_end,block_sizes)]))
+    
+    tmp = np.concatenate([np.argsort(np.argsort(x_true[i:j])) for i,j in zip(ind_start,ind_end)]) + 1
+    x2 = np.divide(tmp, \
+                   np.squeeze(np.concatenate([np.sum(tmp[i:j])*np.ones((k,1)) for i,j,k in zip(ind_start,ind_end,block_sizes)])))
+    tmp = np.power(10, tmp)
+    x3 = np.divide(tmp, \
+                   np.squeeze(np.concatenate([np.sum(tmp[i:j])*np.ones((k,1)) for i,j,k in zip(ind_start,ind_end,block_sizes)])))
+    x4 = np.concatenate([(1./k)*np.ones((k,1)) for k in block_sizes])
+    
+    z1 = x2z(x1, block_sizes)
+    z2 = x2z(x2, block_sizes)
+    z3 = x2z(x3, block_sizes)
+    z4 = x2z(x4, block_sizes)
+    
+    return x1,x2,x3,x4,z1,z2,z3,z4
+
+
+if __name__ == "__main__":
+    x = np.array([1/6.,2/6.,3/6.,1,.5,.1,.4])
+    
+    print "Demonstration of convenience functions (x2z, x2z)"
+    block_sizes = np.array([3,1,3])
+    z = x2z(x, block_sizes)
+    x0 = block_sizes_to_x0(block_sizes)
+    N = block_sizes_to_N(block_sizes)
+    
+    #print x
+    #print z
+    #print N.dot(z) +x0
+    print init_xz(block_sizes, x)
