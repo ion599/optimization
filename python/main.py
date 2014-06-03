@@ -6,7 +6,7 @@ import util
 import numpy as np
 import numpy.linalg as la
 from numpy import ones, array
-from c_extensions import simplex_projection
+import simplex_projection
 from projection import pysimplex_projection, proj_PAV, proj_l1ball
 import matplotlib.pyplot as plt
 import argparse

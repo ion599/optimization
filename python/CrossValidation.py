@@ -8,7 +8,8 @@ import util
 import numpy as np
 import numpy.linalg as la
 from numpy import ones, array
-from proj_PAV import simplex_projection
+import simplex_projection
+from projection import pysimplex_projection, proj_PAV, proj_l1ball
 import matplotlib.pyplot as plt
 import argparse
 import logging
@@ -37,6 +38,7 @@ class CrossValidation:
     def setup(self):
         # load data
         self.A, self.b, self.N, self.block_sizes, x_true = load_data(self.f)
+        self.NT = self.N.T.tocsr()
 
         self.n = np.size(self.b)
         self.x_true = np.squeeze(np.array(x_true))
@@ -50,7 +52,8 @@ class CrossValidation:
                     'suff_dec': 0.003, # FIXME unused
                     'corrections': 500 } # FIXME unused
 
-        self.proj = lambda x: simplex_projection(self.block_sizes - 1,x)
+        self.proj = lambda x: simplex_projection.simplex_projection( \
+                self.block_sizes - 1,x)
         self.z0 = np.zeros(self.N.shape[1])
 
     def run(self):
@@ -59,9 +62,12 @@ class CrossValidation:
             b_train,A_train = self.b[train],self.A[train,:]
             b_test,A_test = self.b[test],self.A[test,:]
 
-            AN = A_train.dot(self.N)
-            f = lambda z: 0.5*la.norm(AN.dot(z)+A_train.dot(self.x0)-b_train)**2
-            nabla_f = lambda z: AN.T.dot(A_train.dot(self.x0)+AN.dot(z)-b_train)
+            AT = A_train.T.tocsr()
+
+            target = A_train.dot(self.x0) - b_train
+
+            f = lambda z: 0.5 * la.norm(A_train.dot(self.N.dot(z)) + target)**2
+            nabla_f = lambda z: self.NT.dot(AT.dot(A_train.dot(self.N.dot(z)) + target))
 
             # Solve
             if self.solver == 'LBFGS':

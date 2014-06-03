@@ -2,7 +2,7 @@ from __future__ import division
 from numpy import array, inf, dot, ones, float
 import numpy as np
 import time
-from c_extensions import simplex_projection
+import simplex_projection
 import sys
 from multiprocessing import Pool
 
