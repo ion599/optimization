@@ -45,7 +45,7 @@ class CrossValidation:
             self.block_sizes)
         logging.debug("Blocks: %s" % self.block_sizes.shape)
 
-        self.options = { 'max_iter': 100,
+        self.options = { 'max_iter': 10,
                     'verbose': 1,
                     'suff_dec': 0.003, # FIXME unused
                     'corrections': 500 } # FIXME unused
@@ -81,6 +81,8 @@ class CrossValidation:
 
     def post_process(self):
         self.cv_errors = []
+        self.train_error = []
+        self.test_error = []
         logging.debug("Shape of x0: %s" % repr(self.x0.shape))
         for i,(train,test) in enumerate(self.kf):
             d = len(self.state[i])
@@ -93,9 +95,11 @@ class CrossValidation:
             starting_error = la.norm(A_train.dot(self.x0)-b_train)
             train_diff = A_train.dot(self.x_hat) - np.tile(b_train,(d,1)).T
             train_error = 0.5 * np.diag(train_diff.T.dot(train_diff))
+            self.train_error.append(train_error)
 
             test_diff = A_test.dot(self.x_hat) - np.tile(b_test,(d,1)).T
             test_error = 0.5 * np.diag(test_diff.T.dot(test_diff))
+            self.test_error.append(test_error)
 
             x_last = self.x_hat[:,-1]
             dist_from_true = np.max(np.abs(x_last-self.x_true))
@@ -110,9 +114,29 @@ class CrossValidation:
             print 'norm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n' % (starting_error, dist_from_true, start_dist_from_true)
         print 'cv error: %8.5e' % np.mean(self.cv_errors)
 
-    def plot(self):
-        for i,(train,test) in enumerate(self.kf):
+        self.mean_time = np.mean([np.cumsum(self.times[i])[-1] for i in range(self.k)])
+        self.mean_error = np.mean([self.test_error[i][-1] for i in range(self.k)])
+
+    def plot_all(self,subplot=None):
+        if subplot:
+            plt.subplot(subplot)
+        for i in range(self.k):
             times = np.cumsum(self.times[i])
+            plt.plot(times,self.test_error[i])
+            plt.hold(True)
+        plt.xlabel('CPU time (minutes)')
+        plt.ylabel('%d-fold CV holdout error (L2)' % self.k)
+        plt.title('CV error')
+
+    def plot(self,subplot=None):
+        if subplot:
+            plt.subplot(subplot)
+        fig, ax = plt.subplots()
+        ax.plot(self.mean_time,self.mean_error,marker='.',label=self.solver)
+        ax.legend(shadow=True)
+        plt.xlabel('CPU time (minutes)')
+        plt.ylabel('%d-fold CV holdout error (L2)' % self.k)
+        plt.title('Average CV error')
 
 if __name__ == "__main__":
     p = parser()
@@ -123,5 +147,7 @@ if __name__ == "__main__":
     cv = CrossValidation(k=3,f=args.file,solver=args.solver)
     cv.run()
     cv.post_process()
-    cv.plot()
+    cv.plot(subplot=211)
+    cv.plot_all(subplot=212)
+    plt.show()
         
