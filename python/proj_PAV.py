@@ -2,6 +2,7 @@ from __future__ import division
 from numpy import array, inf, dot, ones, float
 import numpy as np
 import time
+from c_extensions import simplex_projection
 import sys
 from multiprocessing import Pool
 
@@ -43,7 +44,7 @@ def proj_PAV(s):
 
     return np.maximum(l,np.minimum(u,x))
 
-def simplex_projection(block_sizes, x, processes=1):
+def pysimplex_projection(block_sizes, x, processes=1):
     ind_end = np.cumsum(block_sizes)
     ind_start = np.hstack(([0],ind_end[:-1]))
     if processes == 1:
@@ -72,13 +73,27 @@ if __name__ == "__main__":
     print >> sys.stderr, "y vector", y
     print >> sys.stderr, "weights", w
     print >> sys.stderr, "solution", proj_PAV((y,w,-inf,inf))
+    tic = time.time()
+    for idx in xrange(1000):
+        proj_PAV((y,w,5,7))
+    toc = time.time()
+    print toc - tic
     print >> sys.stderr, "solution with bounds", proj_PAV((y,w,5,7))
+    tic = time.time()
+    for idx in xrange(1000):
+        simplex_projection.pav_projection(y,5,7)
+    toc = time.time()
+    print toc - tic
+    print >> sys.stderr, "solution with bounds", simplex_projection.pav_projection(y,5,7)
 
     N = 3*ones(20000)
     w = array([i%5 for i in range(60000)])
     print >> sys.stderr, w[range(20)]
     start = time.clock()
-    w = simplex_projection(N, w)
+    w = pysimplex_projection(N, w)
     print >> sys.stderr, (time.clock() - start)
     print >> sys.stderr, w[range(20)]
-
+    start = time.clock()
+    w = simplex_projection.simplex_projection(N, w)
+    print >> sys.stderr, (time.clock() - start)
+    print >> sys.stderr, w[range(20)]

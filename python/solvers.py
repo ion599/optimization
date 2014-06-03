@@ -2,6 +2,7 @@ from util import is_ones, all_equal, block_e, PROB_SIMPLEX, EQ_CONSTR_ELIM, \
         L_BFGS, ADMM, SPG
 import numpy as np
 import numpy.linalg as la
+import logging
 import scipy.io as sio
 from numpy import ones, array
 import spg
@@ -48,8 +49,8 @@ def stopping(g,fx,i,t,options=None,TOLER=1e-6):
     norm2_nabla_f = np.square(la.norm(g))
     thresh = TOLER * (1 + abs(fx))
     if options and 'verbose' in options and options['verbose'] >= 1:
-        print "iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx)
+        logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
     if norm2_nabla_f <= thresh:
-        print "iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx)
+        logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
         return True
     return False
