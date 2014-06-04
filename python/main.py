@@ -33,7 +33,7 @@ def main():
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
 
-    x_true = np.array(x_true)
+    x_true = np.squeeze(np.array(x_true))
 
     # Sample usage
     #P = A.T.dot(A)

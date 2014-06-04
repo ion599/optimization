@@ -128,10 +128,10 @@ class CrossValidation:
             dist_from_true = np.max(np.abs(x_last-self.x_true))
             start_dist_from_true = np.max(np.abs(self.x_true-self.x0))
 
-            logging.debug('Train error')
-            logging.debug(train_error)
-            logging.debug('Test error')
-            logging.debug(test_error)
+            logging.debug('Train: %8.5e to %8.5e' % (train_error[0],
+                train_error[-1]))
+            logging.debug('Test:  %8.5e to %8.5e' % (test_error[0],
+                test_error[-1]))
 
             print '0.5norm(A*x_init-b)^2: %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n' \
                     % (starting_error,dist_from_true, start_dist_from_true)
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     cv.post_process()
     cv.cleanup()
         
-    cv2 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iter=200)
+    cv2 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iter=195)
     cv2.run()
     cv2.post_process()
     cv2.cleanup()
