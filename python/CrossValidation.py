@@ -106,14 +106,12 @@ class CrossValidation:
     def post_process(self):
         self.train_error = []
         self.test_error = []
-        logging.debug("Shape of x0: %s" % repr(self.x0.shape))
         for i,(train,test) in enumerate(self.kf):
             d = len(self.states[i])
             b_train,A_train = self.b[train],self.A[train,:]
             b_test,A_test = self.b[test],self.A[test,:]
             self.x_hat = self.N.dot(np.array(self.states[i]).T) + \
                     np.tile(self.x0,(d,1)).T
-            logging.debug("Shape of x_hat: %s" % repr(self.x_hat.shape))
 
             starting_error = 0.5 * la.norm(A_train.dot(self.x0)-b_train) ** 2
             train_diff = A_train.dot(self.x_hat) - np.tile(b_train,(d,1)).T
@@ -133,18 +131,18 @@ class CrossValidation:
             logging.debug('Test:  %8.5e to %8.5e' % (test_error[0],
                 test_error[-1]))
 
-            print '0.5norm(A*x_init-b)^2: %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n' \
-                    % (starting_error,dist_from_true, start_dist_from_true)
+            logging.debug('max|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f' \
+                    % (dist_from_true, start_dist_from_true))
 
         self.mean_time = np.mean([np.cumsum(self.times[i])[-1] for i in \
                 range(self.k)])
         self.mean_error = np.mean([self.test_error[i][-1] for i in \
                 range(self.k)])
-        print 'mean time: %8.5e, mean error: %8.5e' % (self.mean_time,
-                self.mean_error)
+        logging.debug('mean time: %8.5e, mean error: %8.5e' % (self.mean_time,
+                self.mean_error))
+        print '\n\n'
 
     def cleanup(self):
-        from sys import getsizeof
         self.A = None
         self.N = None
         self.NT = None

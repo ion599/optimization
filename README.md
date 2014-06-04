@@ -18,8 +18,9 @@ Run `main.m`.
 
 Running via Python
 -------------------
-To run, cd into the `traffic-estimation/python` directory, and run the `main.py`
-script. See these examples:
+Run the python implementation from the `traffic-estimation/python` directory.
+
+To run the main test, see these examples:
 ```
 cd ~/traffic-estimation/python
 python main.py --file data/stevesSmallData.mat --log=DEBUG --solver LBFGS
@@ -28,6 +29,11 @@ python main.py --file data/stevesSmallData.mat --log=DEBUG --solver DORE
 ```
 If the dataset you want to run is not in the data directory, symlink it in
 from the main dataset.
+
+To run 3-fold cross validation test:
+```
+python CrossValidation.py --log=DEBUG
+```
 
 References
 --------
