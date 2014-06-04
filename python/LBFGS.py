@@ -35,7 +35,8 @@ def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
     return t
 
 # Limited memory BFGS
-def solve(x, f, nabla_f, stopping, m=10,record_every=5,proj=None,options=None):
+def solve(x0, f, nabla_f, stopping, m=10,record_every=5,proj=None, log=None,
+        options=None):
     # FIXME has issues when x == 0 to start
 
     def search_dir(g_new,y_new,s_new,rho,y,s,m=10):
@@ -52,11 +53,11 @@ def solve(x, f, nabla_f, stopping, m=10,record_every=5,proj=None,options=None):
         return -r
 
     # Save initial state
-    iters,times,state = [0],[0],[x]
-    start = time.time()
+    start = log(0,x0,0)
 
     # Initializations
     i,stop = 0,False
+    x = x0
     n = x.shape[0]
     y, s = [np.zeros((n))]*m, [np.zeros((n))]*m
     g_new = nabla_f(x)
@@ -90,13 +91,8 @@ def solve(x, f, nabla_f, stopping, m=10,record_every=5,proj=None,options=None):
 
         # Save intermediate state
         if i % record_every == 0:
-            iters.append(i)
-            times.append(time.time() - start)
-            start = time.time()
-            state.append(x)
+            start = log(i,x,time.time()-start)
 
     # Save final state
-    iters.append(i)
-    times.append(time.time() - start)
-    state.append(x)
-    return (iters,times,state)
+    log(i,x,time.time()-start)
+    return x

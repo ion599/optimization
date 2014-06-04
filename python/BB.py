@@ -3,12 +3,13 @@ import numpy.linalg as la
 import time
 
 # Barzilai-Borwein (BB)
-def solve(x, f, nabla_f, stopping, record_every=5, proj=None, options=None):
+def solve(x0, f, nabla_f, stopping, record_every=5, proj=None, log=None,
+        options=None):
     # Save initial state
-    iters,times,state = [0],[0],[x]
-    start = time.time()
+    start = log(0,x0,0)
 
     i,stop = 0,False
+    x = x0
     x_prev = x + 1
     g_prev = nabla_f(x_prev)
 
@@ -31,13 +32,8 @@ def solve(x, f, nabla_f, stopping, record_every=5, proj=None, options=None):
 
         # Save intermediate state
         if i % record_every == 0:
-            iters.append(i)
-            times.append(time.time() - start)
-            start = time.time()
-            state.append(x)
+            start = log(i,x,time.time()-start)
 
     # Save final state
-    iters.append(i)
-    times.append(time.time() - start)
-    state.append(x)
-    return (iters,times,state)
+    log(i,x,time.time()-start)
+    return x

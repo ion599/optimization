@@ -5,7 +5,6 @@ import numpy.linalg as la
 import logging
 import scipy.io as sio
 from numpy import ones, array
-import spg
 
 def qp(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None):
     from cvxopt.solvers import qp
@@ -34,9 +33,9 @@ def qp2(P, q, G=None, h=None, A=None, b=None, solver=None, initvals=None, \
     else:
         print "'block_sizes' parameter required"
 
-def least_squares(linop, linop_transpose, target, projection, initial, diagnostics=None, options=None):
-    import dore
-    return dore.solve(linop, linop_transpose, target, projection, initial, diagnostics=diagnostics,options=options)
+def least_squares(x, linop, linop_transpose, target, proj=None, diagnostics=None, options=None):
+    import DORE
+    return DORE.solve(x, linop, linop_transpose, target, proj=proj, diagnostics=diagnostics,options=options)
 
 # Stopping condition
 def stopping(g,fx,i,t,options=None,TOLER=1e-6):
@@ -48,7 +47,7 @@ def stopping(g,fx,i,t,options=None,TOLER=1e-6):
 
     norm2_nabla_f = np.square(la.norm(g))
     thresh = TOLER * (1 + abs(fx))
-    if options and 'verbose' in options and options['verbose'] >= 1 and i % 5 == 0:
+    if options and 'verbose' in options and options['verbose'] >= 1 and i % 20 == 0:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
     if norm2_nabla_f <= thresh:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))

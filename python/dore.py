@@ -2,20 +2,26 @@ import numpy as np
 import scipy.sparse
 from numpy import linalg as la
 import random
+import time
+import logging
 
-def solve(linop, linop_T, target, projection, initial, diagnostics = None, options=None, i = 10000, eps = 10**-16):
+def solve(x0, linop, linop_T, target, record_every=5, proj=None,
+        log=None, options=None, i = 10000, eps = 10**-16, A=None, N=None):
     """Solves DORE accelerated least squares via projection
     @param diagnostics is a closure that accepts the current solution and iteration number
     """
+    # Save initial state
+    start = log(0,x0,0)
+
     # override defaults
     if options and 'max_iter' in options:
         i = options['max_iter']
     if options and 'opt_tol' in options:
         eps = options['opt_tol']
 
-    x = np.squeeze(np.asarray(target))
-    y = np.squeeze(np.asarray(initial))
-    n = initial.shape[0]
+    x = -np.array(target)
+    y = np.array(x0)
+    n = x0.shape[0]
 
     y_start = y
     y_prev = y
@@ -30,16 +36,12 @@ def solve(linop, linop_T, target, projection, initial, diagnostics = None, optio
         phi_y = np.squeeze(np.asarray(phi_y))
         err = x - phi_y
         norm_change = ((la.norm(y - y_prev)**2))
-        print err.dot(err), norm_change, la.norm(y)
-
-        if (iter_ % 10 == 0) and diagnostics is not None:
-            diagnostics(y, iter_)
 
         if iter_ > 0 and (norm_change <= eps):
             break
         y_new = y + np.squeeze(np.asarray(linop_T(err)))
 
-        y_new = projection(y_new)
+        y_new = proj(y_new)
         phi_y = linop(y_new)
         phi_y = np.squeeze(phi_y)
         err = x - phi_y
@@ -58,7 +60,7 @@ def solve(linop, linop_T, target, projection, initial, diagnostics = None, optio
                 if dp > 0:
                     a2 = delta_phi_y.dot(err_1)/dp
                     y_2 = y_1 + a2*(y_1 - y_prev)
-                    y_2 = projection(y_2)
+                    y_2 = proj(y_2)
 
                     phi_y_2 = linop(y_2)
                     phi_y_2 = np.squeeze(np.asarray(phi_y_2))
@@ -79,4 +81,12 @@ def solve(linop, linop_T, target, projection, initial, diagnostics = None, optio
         y_prev = y
         y = y_select
 
+        # Save intermediate state
+        if iter_ % record_every == 0:
+            start = log(iter_,y,time.time()-start)
+        if options and 'verbose' in options and options['verbose'] >= 1 and iter_ % 5 == 0:
+            logging.info("iter=%d: %e %e %e" % (iter_,err.dot(err),norm_change,la.norm(y)))
+
+    # Save final state
+    log(iter_,y,time.time()-start)
     return y

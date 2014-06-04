@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import argparse
 import logging
 import operator
-import BB, LBFGS
+import BB, LBFGS, DORE
 import config as c
 
 def parser():
@@ -48,7 +48,7 @@ def main():
     x0 = util.block_e(block_sizes - 1, block_sizes)
     target = b-np.squeeze(A.dot(x0))
 
-    options = { 'max_iter': 500,
+    options = { 'max_iter': 100,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
@@ -66,58 +66,63 @@ def main():
         return projected_value
 
     z0 = np.zeros(N.shape[1])
+
+    import time
+    iters, times, states = [], [], []
+    def log(iter_,state,duration):
+        iters.append(iter_)
+        times.append(duration)
+        states.append(state)
+        start = time.time()
+        return start
+
+    logging.debug('Starting %s solver...' % args.solver)
     if args.solver == 'LBFGS':
-        logging.debug('Starting LBFGS solver...')
-        iters,times,state = LBFGS.solve(z0 + 1, f, nabla_f, solvers.stopping,
-                proj=proj, options=options)
+        LBFGS.solve(z0+1, f, nabla_f, solvers.stopping, log=log,proj=proj,
+                options=options)
         logging.debug("Took %s time" % str(np.sum(times)))
-        logging.debug('Stopping LBFGS solver...')
     elif args.solver == 'BB':
-        logging.debug('Starting BB solver...')
-        iters,times,state  = BB.solve(z0, f, nabla_f, solvers.stopping,
-                proj=proj, options=options)
-        logging.debug('Stopping BB solver...')
+        BB.solve(z0,f,nabla_f,solvers.stopping,log=log,proj=proj,
+                options=options)
     elif args.solver == 'DORE':
-        progress = {}
-
-        def diagnostics(value, iter_):
-            progress[iter_] = la.norm(A.dot(N.dot(value)) - target, 2)
-
-
+        # setup for DORE
+        alpha = 0.99
         lsv = util.lsv_operator(A, N)
         logging.info("Largest singular value: %s" % lsv)
-        A_dore = A*0.99/lsv
-        target_dore = target*0.99/lsv
+        A_dore = A*alpha/lsv
+        target_dore = target*alpha/lsv
 
-        logging.debug('Starting DORE solver...')
-        z, dore_time = util.timer(lambda: solvers.least_squares(lambda z: \
-                A_dore.dot(N.dot(z)), lambda b: N.T.dot(A_dore.T.dot(b)), \
-                target_dore, proj, z0, diagnostics=diagnostics,options=options))
-        logging.debug('Stopping DORE solver...')
-        print 'Time (DORE):', float(dore_time)
-        xDORE = np.squeeze(np.asarray(N.dot(z) + x0))
-        x_init = np.squeeze(np.asarray(x0))
-
-        logging.debug("Shape of x_init: %s" % repr(x_init.shape))
-        logging.debug("Shape of xDORE: %s" % repr(xDORE.shape))
-
-        starting_error = la.norm(A.dot(x_init)-b)
-        training_error = la.norm(A.dot(xDORE)-b)
-        dist_from_true = np.max(np.abs(xDORE-x_true))
-        start_dist_from_true = np.max(np.abs(x_true-x_init))
-
+        DORE.solve(z0, lambda z: A_dore.dot(N.dot(z)),
+                lambda b: N.T.dot(A_dore.T.dot(b)), target_dore, proj=proj,
+                log=log,options=options,A=A,N=N)
         A_dore = None
+    logging.debug('Stopping %s solver...' % args.solver)
 
-        print 'norm(A*x-b): %8.5e\nnorm(A*x_init-b): %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\nCV error: %8.5e\n\n\n' % \
-            (training_error, starting_error, dist_from_true,
-            start_dist_from_true, 0)
-        plt.figure()
-        plt.hist(xDORE)
+    # Plot some stuff
+    d = len(states)
+    x_hat = N.dot(np.array(states).T) + np.tile(x0,(d,1)).T
+    x_last = x_hat[:,-1]
 
-        progress = sorted(progress.iteritems(), key=operator.itemgetter(0))
-        plt.figure()
-        plt.plot([p[0] for p in progress], [p[1] for p in progress])
-        plt.show()
+    logging.debug("Shape of x0: %s" % repr(x0.shape))
+    logging.debug("Shape of x_hat: %s" % repr(x_hat.shape))
+
+    starting_error = 0.5 * la.norm(A.dot(x0)-b)**2
+    diff = A.dot(x_hat) - np.tile(b,(d,1)).T
+    error = 0.5 * np.diag(diff.T.dot(diff))
+
+    dist_from_true = np.max(np.abs(x_last-x_true))
+    start_dist_from_true = np.max(np.abs(x_last-x0))
+
+    print '0.5norm(A*x-b)^2: %8.5e\n0.5norm(A*x_init-b)^2: %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n' % \
+        (error[-1], starting_error, dist_from_true,start_dist_from_true)
+    plt.figure()
+    plt.hist(x_last)
+
+    plt.figure()
+    plt.loglog(np.cumsum(times),error)
+    plt.show()
+
+    return iters, times, states
 
 if __name__ == "__main__":
-    main()
+    iters, times, states = main()
