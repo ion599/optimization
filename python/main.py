@@ -1,17 +1,14 @@
-import solvers
 import scipy.io as sio
-from util import PROB_SIMPLEX, EQ_CONSTR_ELIM, \
-        L_BFGS, ADMM, SPG, load_data
-import util
-import numpy as np
-import numpy.linalg as la
-from numpy import ones, array
-import simplex_projection
-from projection import pysimplex_projection, proj_PAV, proj_l1ball
 import matplotlib.pyplot as plt
 import argparse
 import logging
-import operator
+import numpy as np
+import numpy.linalg as la
+
+import solvers
+import util
+from simplex_projection import simplex_projection
+# from projection import pysimplex_projection
 import BB, LBFGS, DORE
 import config as c
 
@@ -32,11 +29,11 @@ def main():
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # load data
-    A, b, N, block_sizes, x_true = load_data(args.file)
+    A, b, N, block_sizes, x_true = util.load_data(args.file)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
 
-    x_true = np.squeeze(np.asarray(x_true))
+    x_true = np.array(x_true)
 
     # Sample usage
     #P = A.T.dot(A)
@@ -45,8 +42,8 @@ def main():
     #        reduction=EQ_CONSTR_ELIM, method=L_BFGS)
 
     logging.debug("Blocks: %s" % block_sizes.shape)
-    x0 = util.block_e(block_sizes - 1, block_sizes)
-    target = b-np.squeeze(A.dot(x0))
+    x0 = np.array(util.block_e(block_sizes - 1, block_sizes))
+    target = b-A.dot(x0)
 
     options = { 'max_iter': 100,
                 'verbose': 1,
@@ -61,7 +58,7 @@ def main():
     nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
     def proj(x):
-        projected_value = simplex_projection.simplex_projection(block_sizes - 1,x)
+        projected_value = simplex_projection(block_sizes - 1,x)
         #projected_value = projection.pysimplex_projection(block_sizes - 1,x)
         return projected_value
 
@@ -94,7 +91,7 @@ def main():
 
         DORE.solve(z0, lambda z: A_dore.dot(N.dot(z)),
                 lambda b: N.T.dot(A_dore.T.dot(b)), target_dore, proj=proj,
-                log=log,options=options,A=A,N=N)
+                log=log,options=options)
         A_dore = None
     logging.debug('Stopping %s solver...' % args.solver)
 
