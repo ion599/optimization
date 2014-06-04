@@ -105,7 +105,7 @@ if __name__ == "__main__":
     print "Demonstration of simplex projection"
     
     N = 3*ones(20000)
-    w = array([i%5 for i in range(60000)])
+    w = array([(i%5)/10. for i in range(60000)])
     print >> sys.stderr, w[range(20)]
     start = time.clock()
     w = pysimplex_projection(N, w)
