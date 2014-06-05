@@ -191,6 +191,8 @@ static PyObject* simplex_projection(PyObject* self, PyObject* args)
     }
 
     /*  clean up and return the result */
+    Py_DECREF(N);
+    Py_DECREF(y_np);
     Py_INCREF(out_array);
     return out_array;
 
