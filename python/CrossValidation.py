@@ -52,6 +52,24 @@ class CrossValidation:
         self.proj = lambda x: simplex_projection(self.block_sizes - 1,x)
         self.z0 = np.zeros(self.N.shape[1])
 
+    def init_metrics(self):
+        self.train_error = []
+        self.test_error = []
+        self.train_RMSE = []
+        self.test_RMSE = []
+        self.train_pRMSE = []
+        self.test_pRMSE = []
+
+        self.nbins = 6 # emulating class of link by flow
+        counts,bins = np.histogram(self.b, bins=self.nbins)
+        self.bins = bins
+        self.train_bin_error = []
+        self.test_bin_error = []
+        self.train_bin_RMSE = []
+        self.test_bin_RMSE = []
+        self.train_bin_pRMSE = []
+        self.test_bin_pRMSE = []
+
     # Run cross-validation and store intermediate states of each run
     def run(self):
         for i,(train,test) in enumerate(self.kf):
@@ -104,8 +122,19 @@ class CrossValidation:
 
     # Post process intermediate states of runs
     def post_process(self):
-        self.train_error = []
-        self.test_error = []
+        self.init_metrics()
+        self.mean_times = np.mean(np.array([np.cumsum(self.times[i]) for i in \
+                range(self.k)]),axis=0)
+
+        def metrics(A,b,X):
+            d = X.shape[1]
+            diff = A.dot(X) - np.tile(b,(d,1)).T
+            error = 0.5 * np.diag(diff.T.dot(diff))
+            RMSE = np.sqrt(error/b.size)
+            den = np.sum(b)/b.size
+            pRMSE = RMSE / den
+            return (error, RMSE, pRMSE)
+
         for i,(train,test) in enumerate(self.kf):
             d = len(self.states[i])
             b_train,A_train = self.b[train],self.A[train,:]
@@ -113,30 +142,70 @@ class CrossValidation:
             self.x_hat = self.N.dot(np.array(self.states[i]).T) + \
                     np.tile(self.x0,(d,1)).T
 
-            starting_error = 0.5 * la.norm(A_train.dot(self.x0)-b_train) ** 2
-            train_diff = A_train.dot(self.x_hat) - np.tile(b_train,(d,1)).T
-            train_error = 0.5 * np.diag(train_diff.T.dot(train_diff))
-            self.train_error.append(train_error)
+            # Aggregate error
+            error, RMSE, pRMSE = metrics(A_train,b_train,self.x_hat)
+            self.train_error.append(error)
+            self.train_RMSE.append(RMSE)
+            self.train_pRMSE.append(pRMSE)
+            logging.debug('Train: %8.5e to %8.5e' % (RMSE[0],RMSE[-1]))
 
-            test_diff = A_test.dot(self.x_hat) - np.tile(b_test,(d,1)).T
-            test_error = 0.5 * np.diag(test_diff.T.dot(test_diff))
-            self.test_error.append(test_error)
+            error, RMSE, pRMSE = metrics(A_test,b_test,self.x_hat)
+            self.test_error.append(error)
+            self.test_RMSE.append(RMSE)
+            self.test_pRMSE.append(pRMSE)
+            logging.debug('Test:  %8.5e to %8.5e' % (RMSE[0],RMSE[-1]))
 
+            # TODO deprecate
             x_last = self.x_hat[:,-1]
             dist_from_true = np.max(np.abs(x_last-self.x_true))
             start_dist_from_true = np.max(np.abs(self.x_true-self.x0))
-
-            logging.debug('Train: %8.5e to %8.5e' % (train_error[0],
-                train_error[-1]))
-            logging.debug('Test:  %8.5e to %8.5e' % (test_error[0],
-                test_error[-1]))
-
             logging.debug('max|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f' \
                     % (dist_from_true, start_dist_from_true))
 
+            # Error metric by link class
+            inds = np.digitize(b_train,self.bins)
+            indts = np.digitize(b_test,self.bins)
+            b_train_error,b_test_error = [],[]
+            b_train_RMSE,b_test_RMSE = [],[]
+            b_train_pRMSE,b_test_pRMSE = [],[]
+            for j in range(1,self.nbins+2):
+                ind = inds==j
+                indt = indts==j
+                if np.all(indt==False) or np.all(ind==False):
+                    b_train_error.append(None)
+                    b_test_error.append(None)
+                    b_train_RMSE.append(None)
+                    b_test_RMSE.append(None)
+                    b_train_pRMSE.append(None)
+                    b_test_pRMSE.append(None)
+                    continue
+
+                b_bin,A_bin = b_train[ind],A_train[ind,:]
+                b_bint,A_bint = b_test[indt],A_test[indt,:]
+
+                error, RMSE, pRMSE = metrics(A_bin,b_bin,self.x_hat)
+                b_train_error.append(error)
+                b_train_RMSE.append(RMSE)
+                b_train_pRMSE.append(pRMSE)
+
+                error, RMSE, pRMSE = metrics(A_bint,b_bint,self.x_hat)
+                b_test_error.append(error)
+                b_test_RMSE.append(RMSE)
+                b_test_pRMSE.append(pRMSE)
+
+            self.train_bin_error.append(b_train_error)
+            self.test_bin_error.append(b_test_error)
+            self.train_bin_RMSE.append(b_train_RMSE)
+            self.test_bin_RMSE.append(b_test_RMSE)
+            self.train_bin_pRMSE.append(b_train_pRMSE)
+            self.test_bin_pRMSE.append(b_test_pRMSE)
+
+        # Summary metrics
         self.mean_time = np.mean([np.cumsum(self.times[i])[-1] for i in \
                 range(self.k)])
         self.mean_error = np.mean([self.test_error[i][-1] for i in \
+                range(self.k)])
+        self.mean_RMSE = np.mean([self.test_RMSE[i][-1] for i in \
                 range(self.k)])
         logging.debug('mean time: %8.5e, mean error: %8.5e' % (self.mean_time,
                 self.mean_error))
@@ -156,16 +225,17 @@ class CrossValidation:
         for i in range(self.k):
             times = np.cumsum(self.times[i])
             if i == 0:
-                plt.loglog(times,self.test_error[i],color=color,
-                        label='%s-%s' % (self.solver,self.var))
+                plt.loglog(times,self.test_RMSE[i],color=color,
+                        label='%s-%s (%d iters)' % \
+                                (self.solver,self.var,self.iters[0][-1]))
             else:
-                plt.loglog(times,self.test_error[i],color=color)
-
-            plt.loglog(times,self.train_error[i],color=color,alpha=0.25)
+                plt.loglog(times,self.test_RMSE[i],color=color)
             plt.hold(True)
+            plt.loglog(times,self.train_RMSE[i],color=color,alpha=0.25)
+
         plt.xlabel('CPU time (seconds)')
-        plt.ylabel('%d-fold CV holdout error (L2)' % self.k)
-        plt.title('CV error (%d iterations)' % self.iter)
+        plt.ylabel('%d-fold CV RMSE' % self.k)
+        plt.title('CV error')
         plt.legend(shadow=True)
 
     # Plot summary dot for this solver
@@ -173,12 +243,88 @@ class CrossValidation:
         if subplot:
             plt.subplot(subplot)
 
-        plt.plot(self.mean_time,self.mean_error,marker='.',color=color,
+        plt.plot(self.mean_time,self.mean_RMSE,marker='o',color=color,
                 label='%s-%s' % (self.solver,self.var))
-        plt.xlabel('CPU time (seconds)')
-        plt.ylabel('%d-fold CV holdout error (L2)' % self.k)
-        plt.title('Average CV error')
+        plt.xlabel('Average CPU time (seconds)')
+        plt.ylabel('%d-fold CV average RMSE' % self.k)
+        plt.title('CV Summary')
+        plt.legend(shadow=True,loc='best')
+
+    # Plot bar graph of k tests by link volume bin
+    def plot_bar_bins(self,subplot=None,color='k',offset=0,time_max=None,
+            metric='RMSE'):
+        if subplot:
+            plt.subplot(subplot)
+        if metric=='RMSE':
+            test_metrics = self.test_bin_RMSE
+            train_metrics = self.train_bin_RMSE
+        elif metric=='pRMSE':
+            test_metrics = self.test_bin_pRMSE
+            train_metrics = self.train_bin_pRMSE
+
+        ind = len(self.mean_times)-1
+        for i in range(len(self.mean_times)-1,-1,-1):
+            if self.mean_times[i] <= time_max:
+                ind = i
+                break
+
+        for j in range(self.nbins+1):
+            x = np.array(range(self.nbins+1))
+            test_metric = [test_metrics[i][j] for i in \
+                    range(self.k) if test_metrics[i][j] != None]
+            train_metric = [train_metrics[i][j] for i in \
+                    range(self.k) if train_metrics[i][j] != None]
+            y1   = np.mean(test_metric,   axis=0)
+            y2   = np.mean(train_metric,  axis=0)
+            std1 = np.std(test_metric,    axis=0)
+            std2 = np.std(train_metric,   axis=0)
+            if j == 0:
+                plt.bar(x[j]-1+offset,y1[ind],label='%s-%s (%d iters)' % \
+                        (self.solver,self.var,self.iters[0][ind]),width=0.15,
+                        color=color,yerr=std1[ind])
+            else:
+                plt.bar(x[j]-1+offset,y1[ind],width=0.15,color=color,
+                        yerr=std1[ind])
+            plt.hold(True)
+            plt.bar(x[j]-1+offset+1./6,y2[ind],width=0.15,color=color,
+                    yerr=std2[ind],alpha=0.25)
+
+        xlabels = self.bins
+        plt.gca().set_xticklabels(['%8.5e' % x for x in np.hstack((self.bins,
+            [np.inf]))])
+        plt.xlabel('Link flow volume')
+        plt.ylabel('%d-fold CV average %s' % (self.k,metric))
+        plt.title('CV %s by link volume (%f sec)' % \
+                (metric,time_max))
         plt.legend(shadow=True)
+
+    # Plot each of the k tests separately per link volume bin
+    # TODO deprecate
+    def plot_bins(self,subplot=None,color='k',time_max=None):
+        if subplot:
+            plt.subplot(subplot)
+
+        for i in range(self.k):
+            times = np.cumsum(self.times[i])
+            for j in range(self.nbins+1):
+                if self.test_bin_error[i][j] == None or \
+                        self.train_bin_error[i][j] == None:
+                    continue
+                if i == 0:
+                    plt.loglog(times,self.test_bin_error[i][j],color=color,
+                            label='%s-%s %s' % (self.solver,self.var,
+                                self.bins[j]))
+                else:
+                    plt.loglog(times,self.test_bin_error[i][j],color=color)
+                plt.hold(True)
+                plt.loglog(times,self.train_bin_error[i][j],color=color,
+                        alpha=0.25)
+
+        plt.xlabel('CPU time (seconds)')
+        plt.ylabel('%d-fold CV error (L2)' % self.k)
+        plt.title('CV error by link volume (%d iterations)' % self.iter)
+        plt.legend(shadow=True)
+
 
 if __name__ == "__main__":
     p = parser()
@@ -186,25 +332,33 @@ if __name__ == "__main__":
     if args.log in c.ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
 
-    cv3 = CrossValidation(k=3,f=args.file,solver='DORE',var='z',iter=380)
-    cv3.run()
-    cv3.post_process()
-    cv3.cleanup()
+    m = 200 # multiplier
 
-    cv = CrossValidation(k=3,f=args.file,solver='BB',var='z',iter=650)
-    cv.run()
-    cv.post_process()
-    cv.cleanup()
-        
-    cv2 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iter=195)
-    cv2.run()
-    cv2.post_process()
-    cv2.cleanup()
+    cv1 = CrossValidation(k=3,f=args.file,solver='BB',var='z',iter=200*m)
+    cv2 = CrossValidation(k=3,f=args.file,solver='DORE',var='z',iter=105*m)
+    cv3 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iter=50*m)
 
-    cv.plot(subplot=121,color='b')
-    cv.plot_all(subplot=122,color='b')
-    cv2.plot(subplot=121,color='m')
-    cv2.plot_all(subplot=122,color='m')
-    cv3.plot(subplot=121,color='g')
-    cv3.plot_all(subplot=122,color='g')
+    cvs = [cv1,cv2,cv3]
+    colors = ['b','m','g']
+    for cv in cvs:
+        cv.run()
+        cv.post_process()
+        cv.cleanup()
+
+    # Plot
+    [cv.plot(subplot=121,color=c) for (cv,c) in zip(cvs,colors)]
+    [cv.plot_all(subplot=122,color=c) for (cv,c) in zip(cvs,colors)]
+
+    # Compute time cap
+    time_max = np.min([cv.mean_times[-1] for cv in cvs])
+
+    offsets = [0,1./3,2./3]
+    plt.figure()
+    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max) for \
+            (cv,c,o) in zip(cvs,colors,offsets)]
+
+    plt.figure()
+    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,metric='pRMSE') for \
+            (cv,c,o) in zip(cvs,colors,offsets)]
+
     plt.show()
