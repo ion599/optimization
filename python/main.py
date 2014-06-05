@@ -59,7 +59,7 @@ def main():
 
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
-        #projected_value = projection.pysimplex_projection(block_sizes - 1,x)
+        #projected_value = pysimplex_projection(block_sizes - 1,x)
         return projected_value
 
     z0 = np.zeros(N.shape[1])

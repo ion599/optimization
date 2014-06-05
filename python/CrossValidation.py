@@ -50,6 +50,7 @@ class CrossValidation:
                     'corrections': 500 } # FIXME unused
 
         self.proj = lambda x: simplex_projection(self.block_sizes - 1,x)
+        # self.proj = lambda x: pysimplex_projection(self.block_sizes - 1,x)
         self.z0 = np.zeros(self.N.shape[1])
 
     def init_metrics(self):
@@ -131,7 +132,7 @@ class CrossValidation:
             diff = A.dot(X) - np.tile(b,(d,1)).T
             error = 0.5 * np.diag(diff.T.dot(diff))
             RMSE = np.sqrt(error/b.size)
-            den = np.sum(b)/b.size
+            den = np.sum(b)/np.sqrt(b.size)
             pRMSE = RMSE / den
             return (error, RMSE, pRMSE)
 
@@ -332,11 +333,11 @@ if __name__ == "__main__":
     if args.log in c.ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
 
-    m = 200 # multiplier
+    m = 1 # multiplier
 
-    cv1 = CrossValidation(k=3,f=args.file,solver='BB',var='z',iter=200*m)
-    cv2 = CrossValidation(k=3,f=args.file,solver='DORE',var='z',iter=105*m)
-    cv3 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iter=50*m)
+    cv1 = CrossValidation(k=3,f=args.file,solver='BB',var='z',iter=115*m)
+    cv2 = CrossValidation(k=3,f=args.file,solver='DORE',var='z',iter=52*m)
+    cv3 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iter=25*m)
 
     cvs = [cv1,cv2,cv3]
     colors = ['b','m','g']
