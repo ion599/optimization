@@ -124,8 +124,6 @@ static PyObject* pav_projection(PyObject* self, PyObject* args)
     double u, l, avg;
     int n;
     PyObject      *out_array;
-    NpyIter *in_iter;
-    NpyIter_IterNextFunc *in_iternext;
 
     /*  parse single numpy array argument */
     /* Arguments are y (np array), l (double), u (double) */
@@ -145,7 +143,7 @@ static PyObject* pav_projection(PyObject* self, PyObject* args)
 
     pav_algorithm(y, x, n, l, u, 0, n);
 
-    Py_INCREF(out_array);
+    Py_DECREF(y_np);
     return out_array;
 
     /*  in case bad things happen */
@@ -193,7 +191,6 @@ static PyObject* simplex_projection(PyObject* self, PyObject* args)
     /*  clean up and return the result */
     Py_DECREF(N);
     Py_DECREF(y_np);
-    Py_INCREF(out_array);
     return out_array;
 
     /*  in case bad things happen */

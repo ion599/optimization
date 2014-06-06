@@ -7,7 +7,8 @@ from sklearn.cross_validation import KFold
 
 import solvers
 import util
-from simplex_projection import simplex_projection
+from c_extensions.simplex_projection import simplex_projection
+from projection import pysimplex_projection
 # from projection import pysimplex_projection
 import BB, LBFGS, DORE
 import config as c
