@@ -54,22 +54,14 @@ class CrossValidation:
         self.z0 = np.zeros(self.N.shape[1])
 
     def init_metrics(self):
-        self.train_error = []
-        self.test_error = []
-        self.train_RMSE = []
-        self.test_RMSE = []
-        self.train_pRMSE = []
-        self.test_pRMSE = []
+        self.train = {}
+        self.test = {}
 
         self.nbins = 6 # emulating class of link by flow
         counts,bins = np.histogram(self.b, bins=self.nbins)
         self.bins = bins
-        self.train_bin_error = []
-        self.test_bin_error = []
-        self.train_bin_RMSE = []
-        self.test_bin_RMSE = []
-        self.train_bin_pRMSE = []
-        self.test_bin_pRMSE = []
+        self.train_bin = {}
+        self.test_bin = {}
 
     # Run cross-validation and store intermediate states of each run
     def run(self):
@@ -134,7 +126,28 @@ class CrossValidation:
             RMSE = np.sqrt(error/b.size)
             den = np.sum(b)/np.sqrt(b.size)
             pRMSE = RMSE / den
-            return (error, RMSE, pRMSE)
+            plus = A.dot(X) + np.tile(b,(d,1)).T
+
+            # GEH metric [See https://en.wikipedia.org/wiki/GEH_statistic]
+            GEH = np.sqrt(2 * diff**2 / plus)
+            meanGEH = np.mean(GEH,axis=0)
+            maxGEH = np.max(GEH,axis=0)
+            GEHunder5 = np.mean(GEH < 5,axis=0)
+            GEHunder1 = np.mean(GEH < 1,axis=0)
+            GEHunder05 = np.mean(GEH < 0.5,axis=0)
+            GEHunder005 = np.mean(GEH < 0.05,axis=0)
+            return { 'error': error, 'RMSE': RMSE, 'pRMSE': pRMSE,
+                    'mean_GEH': meanGEH, 'max_GEH': maxGEH,
+                    'GEH_under_5': GEHunder5,'GEH_under_1': GEHunder1,
+                    'GEH_under_0.5': GEHunder05,'GEH_under_0.05': GEHunder005,
+                    }
+
+        def populate(d,m):
+            for (k,v) in m.iteritems():
+                if k not in d:
+                    d[k] = []
+                d[k].append(v)
+            return d
 
         for i,(train,test) in enumerate(self.kf):
             d = len(self.states[i])
@@ -144,17 +157,13 @@ class CrossValidation:
                     np.tile(self.x0,(d,1)).T
 
             # Aggregate error
-            error, RMSE, pRMSE = metrics(A_train,b_train,self.x_hat)
-            self.train_error.append(error)
-            self.train_RMSE.append(RMSE)
-            self.train_pRMSE.append(pRMSE)
-            logging.debug('Train: %8.5e to %8.5e' % (RMSE[0],RMSE[-1]))
+            m = metrics(A_train,b_train,self.x_hat)
+            self.train = populate(self.train,m)
+            logging.debug('Train: %8.5e to %8.5e' % (m['RMSE'][0],m['RMSE'][-1]))
 
-            error, RMSE, pRMSE = metrics(A_test,b_test,self.x_hat)
-            self.test_error.append(error)
-            self.test_RMSE.append(RMSE)
-            self.test_pRMSE.append(pRMSE)
-            logging.debug('Test:  %8.5e to %8.5e' % (RMSE[0],RMSE[-1]))
+            m = metrics(A_test,b_test,self.x_hat)
+            self.test = populate(self.test,m)
+            logging.debug('Test: %8.5e to %8.5e' % (m['RMSE'][0],m['RMSE'][-1]))
 
             # TODO deprecate
             x_last = self.x_hat[:,-1]
@@ -166,47 +175,39 @@ class CrossValidation:
             # Error metric by link class
             inds = np.digitize(b_train,self.bins)
             indts = np.digitize(b_test,self.bins)
-            b_train_error,b_test_error = [],[]
-            b_train_RMSE,b_test_RMSE = [],[]
-            b_train_pRMSE,b_test_pRMSE = [],[]
+            train_bin,test_bin = {},{}
             for j in range(1,self.nbins+2):
                 ind = inds==j
                 indt = indts==j
                 if np.all(indt==False) or np.all(ind==False):
-                    b_train_error.append(None)
-                    b_test_error.append(None)
-                    b_train_RMSE.append(None)
-                    b_test_RMSE.append(None)
-                    b_train_pRMSE.append(None)
-                    b_test_pRMSE.append(None)
+                    for k in train_bin.iterkeys():
+                        if k not in train_bin:
+                            train_bin[k] = []
+                        train_bin[k].append(None)
+                    for k in test_bin.iterkeys():
+                        if k not in test_bin:
+                            test_bin[k] = []
+                        test_bin[k].append(None)
                     continue
 
                 b_bin,A_bin = b_train[ind],A_train[ind,:]
                 b_bint,A_bint = b_test[indt],A_test[indt,:]
 
-                error, RMSE, pRMSE = metrics(A_bin,b_bin,self.x_hat)
-                b_train_error.append(error)
-                b_train_RMSE.append(RMSE)
-                b_train_pRMSE.append(pRMSE)
+                m = metrics(A_bin,b_bin,self.x_hat)
+                train_bin = populate(train_bin,m)
 
-                error, RMSE, pRMSE = metrics(A_bint,b_bint,self.x_hat)
-                b_test_error.append(error)
-                b_test_RMSE.append(RMSE)
-                b_test_pRMSE.append(pRMSE)
+                m = metrics(A_bint,b_bint,self.x_hat)
+                test_bin = populate(test_bin,m)
 
-            self.train_bin_error.append(b_train_error)
-            self.test_bin_error.append(b_test_error)
-            self.train_bin_RMSE.append(b_train_RMSE)
-            self.test_bin_RMSE.append(b_test_RMSE)
-            self.train_bin_pRMSE.append(b_train_pRMSE)
-            self.test_bin_pRMSE.append(b_test_pRMSE)
+            self.train_bin = populate(self.train_bin,train_bin)
+            self.test_bin = populate(self.test_bin,test_bin)
 
         # Summary metrics
         self.mean_time = np.mean([np.cumsum(self.times[i])[-1] for i in \
                 range(self.k)])
-        self.mean_error = np.mean([self.test_error[i][-1] for i in \
+        self.mean_error = np.mean([self.test['error'][i][-1] for i in \
                 range(self.k)])
-        self.mean_RMSE = np.mean([self.test_RMSE[i][-1] for i in \
+        self.mean_RMSE = np.mean([self.test['RMSE'][i][-1] for i in \
                 range(self.k)])
         logging.debug('mean time: %8.5e, mean error: %8.5e' % (self.mean_time,
                 self.mean_error))
@@ -226,13 +227,13 @@ class CrossValidation:
         for i in range(self.k):
             times = np.cumsum(self.times[i])
             if i == 0:
-                plt.loglog(times,self.test_RMSE[i],color=color,
+                plt.loglog(times,self.test['RMSE'][i],color=color,
                         label='%s-%s (%d iters)' % \
                                 (self.solver,self.var,self.iters[0][-1]))
             else:
-                plt.loglog(times,self.test_RMSE[i],color=color)
+                plt.loglog(times,self.test['RMSE'][i],color=color)
             plt.hold(True)
-            plt.loglog(times,self.train_RMSE[i],color=color,alpha=0.25)
+            plt.loglog(times,self.train['RMSE'][i],color=color,alpha=0.25)
 
         plt.xlabel('CPU time (seconds)')
         plt.ylabel('%d-fold CV RMSE' % self.k)
@@ -256,12 +257,9 @@ class CrossValidation:
             metric='RMSE'):
         if subplot:
             plt.subplot(subplot)
-        if metric=='RMSE':
-            test_metrics = self.test_bin_RMSE
-            train_metrics = self.train_bin_RMSE
-        elif metric=='pRMSE':
-            test_metrics = self.test_bin_pRMSE
-            train_metrics = self.train_bin_pRMSE
+
+        test_metrics = self.test_bin[metric]
+        train_metrics = self.train_bin[metric]
 
         ind = len(self.mean_times)-1
         for i in range(len(self.mean_times)-1,-1,-1):
@@ -335,11 +333,11 @@ if __name__ == "__main__":
 
     m = 1 # multiplier
 
-    cv1 = CrossValidation(k=3,f=args.file,solver='BB',var='z',iter=115*m)
-    cv2 = CrossValidation(k=3,f=args.file,solver='DORE',var='z',iter=52*m)
-    cv3 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iter=25*m)
+    cv1 = CrossValidation(k=3,f=args.file,solver='BB',var='z',iter=10*m)
+    cv2 = CrossValidation(k=3,f=args.file,solver='DORE',var='z',iter=8*m)
+    cv3 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iter=3*m)
 
-    cvs = [cv1,cv2,cv3]
+    cvs = [cv3,cv1,cv2]
     colors = ['b','m','g']
     for cv in cvs:
         cv.run()
@@ -354,12 +352,26 @@ if __name__ == "__main__":
     time_max = np.min([cv.mean_times[-1] for cv in cvs])
 
     offsets = [0,1./3,2./3]
-    plt.figure()
-    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max) for \
-            (cv,c,o) in zip(cvs,colors,offsets)]
+    # plt.figure()
+    # [cv.plot_bar_bins(color=c,offset=o,time_max=time_max) for \
+    #         (cv,c,o) in zip(cvs,colors,offsets)]
 
     plt.figure()
-    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,metric='pRMSE') for \
-            (cv,c,o) in zip(cvs,colors,offsets)]
+    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,
+        metric='mean_GEH') for (cv,c,o) in zip(cvs,colors,offsets)]
+
+    plt.figure()
+    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,
+        metric='GEH_under_5') for (cv,c,o) in zip(cvs,colors,offsets)]
+    plt.axhline(0.85)
+    plt.legend(shadow=True)
+
+    plt.figure()
+    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,
+        metric='GEH_under_1') for (cv,c,o) in zip(cvs,colors,offsets)]
+
+    plt.figure()
+    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,
+        metric='GEH_under_0.5') for (cv,c,o) in zip(cvs,colors,offsets)]
 
     plt.show()
