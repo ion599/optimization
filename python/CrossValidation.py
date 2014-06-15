@@ -273,55 +273,41 @@ class CrossValidation:
         train_metrics = self.train_bin[metric]
 
         # TODO do this for individual times instead of mean times
-        inds = [len(self.times[i]) for i in range(len(self.times))]
-        if time_max < self.mean_time:
+        inds = [len(self.times[i])-1 for i in range(len(self.times))]
+        iters = [self.iters[i][-1] for i in range(len(self.times))]
+        if self.mean_time > time_max:
             for i in range(len(self.times)):
                 times = np.cumsum(self.times[i])
                 for j in range(len(self.times[i])):
                     if times[j] > time_max:
                         inds[i] = j-1
+                        iters[i] = self.iters[i][j-1]
                         break
-        import ipdb
-        ipdb.set_trace()
             
-        ind = len(self.mean_times)-1
-        for i in range(len(self.mean_times)):
-            if self.mean_times[i] > time_max:
-                ind = i-1
-                break
-
         for j in range(self.nbins+1):
             x = np.array(range(self.nbins+1))
             test_metric = [test_metrics[i][j] for i in \
                     range(self.k) if test_metrics[i][j] != None]
             train_metric = [train_metrics[i][j] for i in \
                     range(self.k) if train_metrics[i][j] != None]
-            y1 = util.mask(test_metric).mean(axis=1)
-            y2 = util.mask(train_metric).mean(axis=1)
-            # y1   = np.mean(test_metric,   axis=0)
-            # y2   = np.mean(train_metric,  axis=0)
-            std1 = util.mask(test_metric).std(axis=1)
-            std2 = util.mask(train_metric).std(axis=1)
-            # std1 = np.std(test_metric,    axis=0)
-            # std2 = np.std(train_metric,   axis=0)
+            if len(test_metric) == 0:
+                continue
+            y1 = np.mean([test_metric[i][inds[i]] for i in range(self.k)])
+            y2 = np.mean([train_metric[i][inds[i]] for i in range(self.k)])
+            std1 = np.std([test_metric[i][inds[i]] for i in range(self.k)])
+            std2 = np.std([train_metric[i][inds[i]] for i in range(self.k)])
             if j == 0:
-                print x[j], y1[ind]
-                print std1[ind]
-                print time_max
-                print self.mean_times
-                print ind, len(self.iters[0])
-                print self.iters[0][ind]
-                plt.bar(x[j]-1+offset,y1[ind],label='%s-%s (%d iters)' % \
-                        (self.solver,self.var,self.iters[0][ind]),width=0.15,
-                        color=color,yerr=std1[ind])
+                plt.bar(x[j]-1+offset,y1,label='%s-%s (%d iters)' % \
+                        (self.solver,self.var,np.mean(iters)),width=0.15,
+                        color=color,yerr=std1)
             else:
                 if type(y1) == np.float64:
                     continue
-                plt.bar(x[j]-1+offset,y1[ind],width=0.15,color=color,
-                        yerr=std1[ind])
+                plt.bar(x[j]-1+offset,y1,width=0.15,color=color,
+                        yerr=std1)
             plt.hold(True)
-            plt.bar(x[j]-1+offset+1./6,y2[ind],width=0.15,color=color,
-                    yerr=std2[ind],alpha=0.25)
+            plt.bar(x[j]-1+offset+1./6,y2,width=0.15,color=color,
+                    yerr=std2,alpha=0.25)
 
         xlabels = self.bins
         plt.gca().set_xticklabels(['%8.5e' % x for x in np.hstack((self.bins,
@@ -368,7 +354,7 @@ if __name__ == "__main__":
 
     e = 0.03
     k = 3
-    m = 40 # multiplier
+    m = 10 # multiplier
 
     cv1 = CrossValidation(k=k,f=args.file,noise=e,solver='BB',var='z',iter=20*m)
     cv2 = CrossValidation(k=k,f=args.file,noise=e,solver='DORE',var='z',iter=12*m)
