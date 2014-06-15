@@ -291,6 +291,9 @@ class CrossValidation:
             train_metric = [train_metrics[i][j] for i in \
                     range(self.k) if train_metrics[i][j] != None]
             if len(test_metric) == 0:
+                print 'Skipping %s %s' % (metric,j)
+                import ipdb
+                ipdb.set_trace()
                 continue
             y1 = np.mean([test_metric[i][inds[i]] for i in range(self.k)])
             y2 = np.mean([train_metric[i][inds[i]] for i in range(self.k)])
@@ -301,8 +304,6 @@ class CrossValidation:
                         (self.solver,self.var,np.mean(iters)),width=0.15,
                         color=color,yerr=std1)
             else:
-                if type(y1) == np.float64:
-                    continue
                 plt.bar(x[j]-1+offset,y1,width=0.15,color=color,
                         yerr=std1)
             plt.hold(True)
