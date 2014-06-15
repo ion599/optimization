@@ -96,12 +96,9 @@ def load_data(filename):
     else:
         A = data['A']
     A = A.tocsr()
-
-    if data.has_key('b'):
-        b = data['b']
-    else:
-        b = data['f']
-    b = np.squeeze(np.asarray(b))
+    # Remove rows of zeros
+    nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
+    A = sps.lil_matrix(A[nnz,:]).tocsr()
 
     if data.has_key('block_sizes'):
         block_sizes = data['block_sizes']
@@ -112,6 +109,14 @@ def load_data(filename):
         x_true = data['x']
     else:
         x_true = data['real_a']
+    x_true = np.squeeze(np.array(x_true))
+
+    # if data.has_key('b'):
+    #     b = data['b']
+    # else:
+    #     b = data['f']
+    # b = np.squeeze(np.asarray(b))
+    b = A.dot(x_true)
 
     logging.debug('Creating sparse N matrix')
     N = block_sizes_to_N(block_sizes)
@@ -218,6 +223,14 @@ def init_xz(block_sizes, x_true):
     
     return x1,x2,x3,x4,z1,z2,z3,z4
 
+def mask(arr):
+    k = len(arr)
+    size = np.max([len(arr[i]) for i in range(k)])
+    masked = np.ma.empty((size,k))
+    masked.mask = True
+    for i in range(k):
+        masked[:len(arr[i]),i] = np.array(arr[i])
+    return masked
 
 if __name__ == "__main__":
     x = np.array([1/6.,2/6.,3/6.,1,.5,.1,.4])

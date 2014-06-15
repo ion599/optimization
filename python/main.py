@@ -33,8 +33,6 @@ def main():
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
 
-    x_true = np.squeeze(np.array(x_true))
-
     # Sample usage
     #P = A.T.dot(A)
     #q = A.T.dot(b)
@@ -43,7 +41,7 @@ def main():
 
     logging.debug("Blocks: %s" % block_sizes.shape)
     x0 = np.array(util.block_e(block_sizes - 1, block_sizes))
-    target = b-A.dot(x0)
+    target = A.dot(x0)-b
 
     options = { 'max_iter': 100,
                 'verbose': 1,
@@ -52,14 +50,12 @@ def main():
     AT = A.T.tocsr()
     NT = N.T.tocsr()
 
-    target = A.dot(x0) - b
-
     f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
     nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
-        #projected_value = pysimplex_projection(block_sizes - 1,x)
+        # projected_value = pysimplex_projection(block_sizes - 1,x)
         return projected_value
 
     z0 = np.zeros(N.shape[1])

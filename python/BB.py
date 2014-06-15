@@ -28,7 +28,7 @@ def solve(x0, f, nabla_f, stopping, record_every=5, proj=None, log=None,
         if proj:
             x = proj(x)
         fx = f(x)
-        stop = stopping(g,fx,i,t,options)
+        stop = stopping(g,fx,i,t,options=options)
 
         # Save intermediate state
         if i % record_every == 0:

@@ -38,7 +38,7 @@ def least_squares(x, linop, linop_transpose, target, proj=None, diagnostics=None
     return DORE.solve(x, linop, linop_transpose, target, proj=proj, diagnostics=diagnostics,options=options)
 
 # Stopping condition
-def stopping(g,fx,i,t,options=None,TOLER=1e-6):
+def stopping(g,fx,i,t,d=None,options=None,TOLER=1e-6):
     if options and 'max_iter' in options:
         if i >= options['max_iter']:
             return True
@@ -50,6 +50,9 @@ def stopping(g,fx,i,t,options=None,TOLER=1e-6):
     if options and 'verbose' in options and options['verbose'] >= 1 and i % 20 == 0:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
     if norm2_nabla_f <= thresh:
+        logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
+        return True
+    if type(d) != type(None) and la.norm(t*d) <= 1e-8:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
         return True
     return False

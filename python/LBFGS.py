@@ -17,21 +17,33 @@ def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
     proj_x = proj(x)
     nabla_fx = nabla_f(proj_x)
     while not stop:
+        # print t, x
         proj_xtd = proj(x + t*d)
 
         # armijo condition violated
-        if f(proj_xtd) > f(proj_x) + c1 * t * d.dot(nabla_fx):
-            # print 'ar', alpha, beta, t
+        if f(proj_xtd) >= f(proj_x) + c1 * t * d.dot(nabla_fx):
+            # print 'ar', f(proj_xtd),f(proj_x)+c1*t*d.dot(nabla_fx),f(proj_x),alpha,beta,t
+            # print nabla_fx
             beta = t
             t = 0.5 * (alpha + beta)
         # curvature condition violated
         elif d.dot(nabla_f(proj_xtd)) < c2 * d.dot(nabla_fx):
-            # print 'cc', alpha,beta, t
+            # print 'cc', d.dot(nabla_f(proj_xtd)),c2*d.dot(nabla_fx),alpha,beta,t
             alpha = t
-            t = 2 * alpha if beta == float('inf') else 0.5*(alpha+beta)
+            t = 2 * alpha if beta == float('inf') else 0.5 * (alpha + beta)
+            if np.abs(alpha-beta) <= 1e-15:
+                stop = True
         # both conditions pass
         else:
             stop = True
+        
+        if la.norm(t*d) <= 1e-8:
+            stop = True
+
+        if np.abs(alpha-beta) == 0:
+            import ipdb
+            ipdb.set_trace()
+        # print np.abs(alpha-beta)
     return t
 
 # Limited memory BFGS
@@ -62,6 +74,7 @@ def solve(x0, f, nabla_f, stopping, m=10,record_every=5,proj=None, log=None,
     y, s = [np.zeros((n))]*m, [np.zeros((n))]*m
     g_new = nabla_f(x)
     y_new, s_new = g_new, np.ones((n))
+
     rho, rho_new = [0]*m, 1 / (y_new.dot(s_new))
     while not stop:
         i+=1
@@ -83,11 +96,15 @@ def solve(x0, f, nabla_f, stopping, m=10,record_every=5,proj=None, log=None,
         g = g_new
         g_new = nabla_f(x_next)
         y_new = g_new - g 
+        if y_new.dot(s_new) == 0:
+            print "iter=%d, f=%8.5e" % (i,f(x_next))
+            import ipdb
+            ipdb.set_trace()
         rho_new = 1 / (y_new.dot(s_new))
 
         x = x_next
         fx = f(x)
-        stop = stopping(g_new,fx,i,t,options)
+        stop = stopping(g_new,fx,i,t,d=d,options=options)
 
         # Save intermediate state
         if i % record_every == 0:

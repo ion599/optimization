@@ -8,7 +8,6 @@ from sklearn.cross_validation import KFold
 import solvers
 import util
 from c_extensions.simplex_projection import simplex_projection
-from projection import pysimplex_projection
 # from projection import pysimplex_projection
 import BB, LBFGS, DORE
 import config as c
@@ -16,12 +15,14 @@ from main import parser
 
 class CrossValidation:
 
-    def __init__(self,k=3,f=None,solver=None,var=None,iter=200):
+    def __init__(self,k=3,f=None,solver=None,var=None,iter=200,noise=None):
         self.f=f
         self.solver=solver
         self.var = var
         self.iter = iter
+        self.noise = noise
         self.k=k
+
         self.setup()
         self.kf = KFold(self.n,n_folds=k, indices=True)
         self.iters = [None]*k
@@ -36,13 +37,20 @@ class CrossValidation:
 
     def setup(self):
         # load data
-        self.A, self.b, self.N, self.block_sizes, x_true=util.load_data(self.f)
+        self.A,self.b,self.N,self.block_sizes,self.x_true=util.load_data(self.f)
         self.NT = self.N.T.tocsr()
 
-        self.n = np.size(self.b)
-        self.x_true = np.squeeze(np.array(x_true))
+        # Assumption: noise is proportional to link volume
+        if self.noise:
+            self.b_true = self.b
+            delta = 2*(np.random.random_sample(self.b.shape)-0.5)*self.b*self.noise
+            self.b = self.b + delta
 
-        self.x0 = np.array(util.block_e(self.block_sizes - 1, self.block_sizes))
+        self.n = np.size(self.b)
+
+        self.x0 = np.array(util.block_e(self.block_sizes-1, self.block_sizes))
+        # self.x0 = self.x_true
+
         logging.debug("Blocks: %s" % self.block_sizes.shape)
 
         self.options = { 'max_iter': self.iter,
@@ -92,7 +100,6 @@ class CrossValidation:
             if self.solver == 'LBFGS':
                 LBFGS.solve(self.z0+1, f, nabla_f, solvers.stopping, log=log,
                         proj=self.proj,options=self.options)
-                logging.debug("Took %s time" % str(np.sum(times)))
             elif self.solver == 'BB':
                 BB.solve(self.z0,f,nabla_f,solvers.stopping,log=log,
                         proj=self.proj,options=self.options)
@@ -107,7 +114,8 @@ class CrossValidation:
                         lambda b: self.N.T.dot(A_dore.T.dot(b)), 
                         target_dore,proj=self.proj,log=log,options=self.options)
                 A_dore = None
-            logging.debug('[%d] Stopping %s solver...' % (i,self.solver))
+            logging.debug('[%d] Stopping %s solver... %s' % \
+                    (i,self.solver,str(np.sum(times))))
 
             self.iters[i] = iters
             self.times[i] = times
@@ -117,8 +125,10 @@ class CrossValidation:
     # Post process intermediate states of runs
     def post_process(self):
         self.init_metrics()
-        self.mean_times = np.mean(np.array([np.cumsum(self.times[i]) for i in \
-                range(self.k)]),axis=0)
+
+        self.mean_times = util.mask(self.times).cumsum(axis=0).mean(axis=1)
+        # self.mean_times = np.mean(np.array([np.cumsum(self.times[i]) for i in \
+        #         range(self.k)]),axis=0)
 
         def metrics(A,b,X):
             d = X.shape[1]
@@ -262,10 +272,22 @@ class CrossValidation:
         test_metrics = self.test_bin[metric]
         train_metrics = self.train_bin[metric]
 
+        # TODO do this for individual times instead of mean times
+        inds = [len(self.times[i]) for i in range(len(self.times))]
+        if time_max < self.mean_time:
+            for i in range(len(self.times)):
+                times = np.cumsum(self.times[i])
+                for j in range(len(self.times[i])):
+                    if times[j] > time_max:
+                        inds[i] = j-1
+                        break
+        import ipdb
+        ipdb.set_trace()
+            
         ind = len(self.mean_times)-1
-        for i in range(len(self.mean_times)-1,-1,-1):
-            if self.mean_times[i] <= time_max:
-                ind = i
+        for i in range(len(self.mean_times)):
+            if self.mean_times[i] > time_max:
+                ind = i-1
                 break
 
         for j in range(self.nbins+1):
@@ -274,15 +296,27 @@ class CrossValidation:
                     range(self.k) if test_metrics[i][j] != None]
             train_metric = [train_metrics[i][j] for i in \
                     range(self.k) if train_metrics[i][j] != None]
-            y1   = np.mean(test_metric,   axis=0)
-            y2   = np.mean(train_metric,  axis=0)
-            std1 = np.std(test_metric,    axis=0)
-            std2 = np.std(train_metric,   axis=0)
+            y1 = util.mask(test_metric).mean(axis=1)
+            y2 = util.mask(train_metric).mean(axis=1)
+            # y1   = np.mean(test_metric,   axis=0)
+            # y2   = np.mean(train_metric,  axis=0)
+            std1 = util.mask(test_metric).std(axis=1)
+            std2 = util.mask(train_metric).std(axis=1)
+            # std1 = np.std(test_metric,    axis=0)
+            # std2 = np.std(train_metric,   axis=0)
             if j == 0:
+                print x[j], y1[ind]
+                print std1[ind]
+                print time_max
+                print self.mean_times
+                print ind, len(self.iters[0])
+                print self.iters[0][ind]
                 plt.bar(x[j]-1+offset,y1[ind],label='%s-%s (%d iters)' % \
                         (self.solver,self.var,self.iters[0][ind]),width=0.15,
                         color=color,yerr=std1[ind])
             else:
+                if type(y1) == np.float64:
+                    continue
                 plt.bar(x[j]-1+offset,y1[ind],width=0.15,color=color,
                         yerr=std1[ind])
             plt.hold(True)
@@ -332,14 +366,20 @@ if __name__ == "__main__":
     if args.log in c.ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
 
-    m = 1 # multiplier
+    e = 0.03
+    k = 3
+    m = 40 # multiplier
 
-    cv1 = CrossValidation(k=3,f=args.file,solver='BB',var='z',iter=10*m)
-    cv2 = CrossValidation(k=3,f=args.file,solver='DORE',var='z',iter=8*m)
-    cv3 = CrossValidation(k=3,f=args.file,solver='LBFGS',var='z',iter=3*m)
+    cv1 = CrossValidation(k=k,f=args.file,noise=e,solver='BB',var='z',iter=20*m)
+    cv2 = CrossValidation(k=k,f=args.file,noise=e,solver='DORE',var='z',iter=12*m)
+    cv3 = CrossValidation(k=k,f=args.file,noise=e,solver='LBFGS',var='z',iter=5*m)
 
-    cvs = [cv3,cv1,cv2]
+    cvs = [cv1,cv2,cv3]
     colors = ['b','m','g']
+    # cvs = [cv1,cv2]
+    # colors = ['b','m']
+    # cvs = [cv3]
+    # colors = ['g']
     for cv in cvs:
         cv.run()
         cv.post_process()
@@ -350,16 +390,13 @@ if __name__ == "__main__":
     [cv.plot_all(subplot=122,color=c) for (cv,c) in zip(cvs,colors)]
 
     # Compute time cap
-    time_max = np.min([cv.mean_times[-1] for cv in cvs])
+    time_max = np.min([cv.mean_time for cv in cvs])
+    # time_max = 0
 
     offsets = [0,1./3,2./3]
     # plt.figure()
     # [cv.plot_bar_bins(color=c,offset=o,time_max=time_max) for \
     #         (cv,c,o) in zip(cvs,colors,offsets)]
-
-    plt.figure()
-    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,
-        metric='mean_GEH') for (cv,c,o) in zip(cvs,colors,offsets)]
 
     plt.figure()
     [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,
@@ -371,8 +408,8 @@ if __name__ == "__main__":
     [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,
         metric='GEH_under_1') for (cv,c,o) in zip(cvs,colors,offsets)]
 
-    plt.figure()
-    [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,
-        metric='GEH_under_0.5') for (cv,c,o) in zip(cvs,colors,offsets)]
+    # plt.figure()
+    # [cv.plot_bar_bins(color=c,offset=o,time_max=time_max,
+    #     metric='GEH_under_0.5') for (cv,c,o) in zip(cvs,colors,offsets)]
 
     plt.show()
