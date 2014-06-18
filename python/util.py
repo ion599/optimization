@@ -97,6 +97,7 @@ def load_data(filename):
         A = data['A']
     A = A.tocsr()
     # Remove rows of zeros
+    nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
     nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
     A = sps.lil_matrix(A[nnz,:]).tocsr()
 
@@ -124,7 +125,7 @@ def load_data(filename):
 
     logging.debug('File loaded successfully')
 
-    return (A, b, N, block_sizes, x_true)
+    return (A, b, N, block_sizes, x_true, nz)
 
 def AN(A,N):
     # TODO port from preADMM.m (lines 3-21)

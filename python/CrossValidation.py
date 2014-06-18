@@ -3,8 +3,7 @@ import logging
 import numpy as np
 import numpy.linalg as la
 import time
-from sklearn.cross_validation import KFold
-
+from sklearn.cross_validation import KFold, LeaveOneLabelOut, LeavePLabelOut
 import solvers
 import util
 from c_extensions.simplex_projection import simplex_projection
@@ -13,21 +12,63 @@ import BB, LBFGS, DORE
 import config as c
 from main import parser
 
+KEYS = ['mean_GEH', 'RMSE', 'GEH_under_5', 'GEH_under_1', 'GEH_under_0.05', 'GEH_under_0.5', 'max_GEH', 'pRMSE', 'error']
+
 class CrossValidation:
 
-    def __init__(self,k=3,f=None,solver=None,var=None,iter=200,noise=None):
+    def __init__(self,k=3,f=None,solver=None,var=None,iter=200,noise=None,
+            k_type=None,reg=None):
         self.f=f
         self.solver=solver
         self.var = var
         self.iter = iter
         self.noise = noise
-        self.k=k
+        self.reg = reg
 
         self.setup()
-        self.kf = KFold(self.n,n_folds=k, indices=True)
-        self.iters = [None]*k
-        self.times = [None]*k
-        self.states = [None]*k
+        self.setup_kf(k=k,k_type=k_type)
+
+    def setup_kf(self,k=3,k_type=None):
+        self.k_type = k_type
+        if self.k_type == None:
+            self.kf = KFold(self.n,n_folds=k, indices=True)
+            self.k = k
+        elif self.k_type == 'taz_ids':
+            import pickle
+            with open('%s/taz_ids.pkl' % c.DATA_DIR) as f:
+                ids = pickle.load(f)
+            labels=[int(id) for (ind,id) in ids if ind not in self.nz]
+            self.kf = LeaveOneLabelOut(labels=labels)
+            self.k = self.kf.n_unique_labels
+        elif self.k_type == 'city_ids':
+            import pickle
+            with open('%s/city_ids.pkl' % c.DATA_DIR) as f:
+                ids = pickle.load(f)
+            # FIXME caution, cities with no id are all grouped together
+            labels=[int(id) if id else 0 for (ind,id) in ids if ind not in self.nz]
+            self.kf = LeaveOneLabelOut(labels=labels)
+            self.k = self.kf.n_unique_labels
+        elif self.k_type == 'street_names':
+            import pickle
+            with open('%s/street_names.pkl' % c.DATA_DIR) as f:
+                ids = pickle.load(f)
+            labels=[id for (ind,id) in ids if ind not in self.nz]
+            self.k = k
+            unique_labels = list(set(labels))
+            nunique_labels = len(unique_labels)
+            name_to_b_ind = [[ind for ind,name in enumerate(labels) if \
+                    name == label] for label in unique_labels]
+            kf = KFold(nunique_labels,n_folds=k,indices=True)
+            self.kf = []
+            for (train,test) in kf:
+                train_temp = [name_to_b_ind[t] for t in train]
+                train_temp = [item for sublist in train_temp for item in sublist]
+                test_temp = [name_to_b_ind[t] for t in test]
+                test_temp = [item for sublist in test_temp for item in sublist]
+                self.kf.append((train_temp,test_temp))
+        self.iters = [None]*self.k
+        self.times = [None]*self.k
+        self.states = [None]*self.k
 
     def save(self):
         pass
@@ -37,13 +78,15 @@ class CrossValidation:
 
     def setup(self):
         # load data
-        self.A,self.b,self.N,self.block_sizes,self.x_true=util.load_data(self.f)
+        self.A,self.b,self.N,self.block_sizes,self.x_true,self.nz = \
+                util.load_data(self.f)
         self.NT = self.N.T.tocsr()
 
         # Assumption: noise is proportional to link volume
         if self.noise:
             self.b_true = self.b
-            delta = 2*(np.random.random_sample(self.b.shape)-0.5)*self.b*self.noise
+            # delta = 2*(np.random.random_sample(self.b.shape)-0.5)*self.b*self.noise
+            delta = np.random.normal(scale=self.b*self.noise)
             self.b = self.b + delta
 
         self.n = np.size(self.b)
@@ -83,9 +126,14 @@ class CrossValidation:
 
             target = A_train.dot(self.x0) - b_train
 
-            f = lambda z: 0.5 * la.norm(A_train.dot(self.N.dot(z)) + target)**2
-            nabla_f = lambda z: self.NT.dot(AT.dot(A_train.dot(self.N.dot(z)) \
-                    + target))
+            if self.reg == None:
+                f = lambda z: 0.5 * la.norm(A_train.dot(self.N.dot(z)) + target)**2
+                nabla_f = lambda z: self.NT.dot(AT.dot(A_train.dot(self.N.dot(z)) \
+                        + target))
+            elif self.reg == 'L2':
+                f = lambda z: 0.5 * la.norm(A_train.dot(self.N.dot(z)) + target)**2 + 0.5 * la.norm(self.N.dot(z) + self.x0)**2
+                nabla_f = lambda z: self.NT.dot(AT.dot(A_train.dot(self.N.dot(z)) \
+                        + target)) + self.NT.dot(self.N.dot(z) + self.x0)
 
             iters, times, states = [], [], []
             def log(iter_,state,duration):
@@ -191,11 +239,11 @@ class CrossValidation:
                 ind = inds==j
                 indt = indts==j
                 if np.all(indt==False) or np.all(ind==False):
-                    for k in train_bin.iterkeys():
+                    for k in KEYS:
                         if k not in train_bin:
                             train_bin[k] = []
                         train_bin[k].append(None)
-                    for k in test_bin.iterkeys():
+                    for k in KEYS:
                         if k not in test_bin:
                             test_bin[k] = []
                         test_bin[k].append(None)
@@ -286,19 +334,27 @@ class CrossValidation:
             
         for j in range(self.nbins+1):
             x = np.array(range(self.nbins+1))
-            test_metric = [test_metrics[i][j] for i in \
-                    range(self.k) if test_metrics[i][j] != None]
-            train_metric = [train_metrics[i][j] for i in \
-                    range(self.k) if train_metrics[i][j] != None]
-            if len(test_metric) == 0:
-                print 'Skipping %s %s' % (metric,j)
+            try:
+                test_metric = [test_metrics[i][j] for i in range(self.k)]
+                train_metric = [train_metrics[i][j] for i in range(self.k)]
+            except IndexError:
                 import ipdb
                 ipdb.set_trace()
+            if len(test_metric) == 0:
+                print 'Skipping %s %s (empty)' % (metric,j)
                 continue
-            y1 = np.mean([test_metric[i][inds[i]] for i in range(self.k)])
-            y2 = np.mean([train_metric[i][inds[i]] for i in range(self.k)])
-            std1 = np.std([test_metric[i][inds[i]] for i in range(self.k)])
-            std2 = np.std([train_metric[i][inds[i]] for i in range(self.k)])
+            try:
+                y1 = np.mean([test_metric[i][inds[i]] for i in range(self.k) if \
+                        test_metric[i] != None])
+                y2 = np.mean([train_metric[i][inds[i]] for i in range(self.k) if \
+                        train_metric[i] != None])
+                std1 = np.std([test_metric[i][inds[i]] for i in range(self.k) if \
+                        test_metric[i] != None])
+                std2 = np.std([train_metric[i][inds[i]] for i in range(self.k) if \
+                        train_metric[i] != None])
+            except IndexError:
+                import ipdb
+                ipdb.set_trace()
             if j == 0:
                 plt.bar(x[j]-1+offset,y1,label='%s-%s (%d iters)' % \
                         (self.solver,self.var,np.mean(iters)),width=0.15,
@@ -353,14 +409,19 @@ if __name__ == "__main__":
     if args.log in c.ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
 
-    e = 0.03
+    # Parameters
+    e = 0.01
     k = 3
     m = 10 # multiplier
+    k_type = 'city_ids'
+    reg = 'L2'
 
-    cv1 = CrossValidation(k=k,f=args.file,noise=e,solver='BB',var='z',iter=20*m)
-    cv2 = CrossValidation(k=k,f=args.file,noise=e,solver='DORE',var='z',iter=12*m)
-    cv3 = CrossValidation(k=k,f=args.file,noise=e,solver='LBFGS',var='z',iter=5*m)
+    # Set up CV for different algorithms
+    cv1 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,solver='BB',var='z',iter=20*m)
+    cv2 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,solver='DORE',var='z',iter=12*m)
+    cv3 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,solver='LBFGS',var='z',iter=5*m)
 
+    # Run each algorithm and compute metrics
     cvs = [cv1,cv2,cv3]
     colors = ['b','m','g']
     # cvs = [cv1,cv2]
