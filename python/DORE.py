@@ -6,7 +6,7 @@ import time
 import logging
 
 def solve(x0, linop, linop_T, target, record_every=5, proj=None,
-        log=None, options=None, i = 10000, eps = 10**-36):
+        log=None, options=None, i = 10000, eps = 10**-16):
     """Solves DORE accelerated least squares via projection
     @param diagnostics is a closure that accepts the current solution and 
     iteration number

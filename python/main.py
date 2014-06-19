@@ -29,7 +29,7 @@ def main():
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # load data
-    A, b, N, block_sizes, x_true = util.load_data(args.file)
+    A, b, N, block_sizes, x_true, nz = util.load_data(args.file)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
 
@@ -43,7 +43,7 @@ def main():
     x0 = np.array(util.block_e(block_sizes - 1, block_sizes))
     target = A.dot(x0)-b
 
-    options = { 'max_iter': 100,
+    options = { 'max_iter': 5000,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused

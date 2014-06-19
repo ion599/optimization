@@ -86,6 +86,18 @@ def block_sizes_to_x0(block_sizes):
 def is_sparse_matrix(A):
     return not sps.sputils.isdense(A)
 
+def load_weights(filename,block_sizes,weight=1):
+    import pickle
+    with open(filename) as f:
+        data = pickle.load(f)
+    D = np.array([v for (i,v) in data])
+    # normalize weights
+    blocks_end = np.cumsum(block_sizes)
+    blocks_start = np.hstack((0,blocks_end[:-1]))
+    blocks = [D[s:e] for s,e in np.vstack((blocks_start,blocks_end)).T]
+    blocks = [b/sum(b) for b in blocks]
+    return weight*np.array([e for b in blocks for e in b])
+
 def load_data(filename):
     logging.debug('Loading %s...' % filename)
     data = sio.loadmat(filename)

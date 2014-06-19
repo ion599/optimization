@@ -17,16 +17,55 @@ KEYS = ['mean_GEH', 'RMSE', 'GEH_under_5', 'GEH_under_1', 'GEH_under_0.05', 'GEH
 class CrossValidation:
 
     def __init__(self,k=3,f=None,solver=None,var=None,iter=200,noise=None,
-            k_type=None,reg=None):
+            k_type=None,reg=None,weights=None):
         self.f=f
         self.solver=solver
         self.var = var
         self.iter = iter
         self.noise = noise
         self.reg = reg
+        self.weights = weights
 
         self.setup()
         self.setup_kf(k=k,k_type=k_type)
+
+    def save(self):
+        pass
+
+    def load(self):
+        pass
+
+    def setup(self):
+        # load data
+        self.A,self.b,self.N,self.block_sizes,self.x_true,self.nz = \
+                util.load_data(self.f)
+        self.NT = self.N.T.tocsr()
+
+        # Assumption: Gaussian noise is proportional to link volume
+        if self.noise:
+            self.b_true = self.b
+            delta = np.random.normal(scale=self.b*self.noise)
+            self.b = self.b + delta
+        self.n = np.size(self.b)
+
+        self.x0 = np.array(util.block_e(self.block_sizes-1, self.block_sizes))
+        # self.x0 = self.x_true
+
+        logging.debug("Blocks: %s" % self.block_sizes.shape)
+
+        self.options = { 'max_iter': self.iter,
+                    'verbose': 0,
+                    'suff_dec': 0.003, # FIXME unused
+                    'corrections': 500 } # FIXME unused
+
+        self.proj = lambda x: simplex_projection(self.block_sizes - 1,x)
+        # self.proj = lambda x: pysimplex_projection(self.block_sizes - 1,x)
+        self.z0 = np.zeros(self.N.shape[1])
+
+        if self.reg and self.weights == 'travel_time':
+            self.D = util.load_weights('%s/travel_times.pkl' % c.DATA_DIR,
+                    self.block_sizes,weight=1)
+            self.D2 = self.D*self.D
 
     def setup_kf(self,k=3,k_type=None):
         self.k_type = k_type
@@ -70,41 +109,6 @@ class CrossValidation:
         self.times = [None]*self.k
         self.states = [None]*self.k
 
-    def save(self):
-        pass
-
-    def load(self):
-        pass
-
-    def setup(self):
-        # load data
-        self.A,self.b,self.N,self.block_sizes,self.x_true,self.nz = \
-                util.load_data(self.f)
-        self.NT = self.N.T.tocsr()
-
-        # Assumption: noise is proportional to link volume
-        if self.noise:
-            self.b_true = self.b
-            # delta = 2*(np.random.random_sample(self.b.shape)-0.5)*self.b*self.noise
-            delta = np.random.normal(scale=self.b*self.noise)
-            self.b = self.b + delta
-
-        self.n = np.size(self.b)
-
-        self.x0 = np.array(util.block_e(self.block_sizes-1, self.block_sizes))
-        # self.x0 = self.x_true
-
-        logging.debug("Blocks: %s" % self.block_sizes.shape)
-
-        self.options = { 'max_iter': self.iter,
-                    'verbose': 0,
-                    'suff_dec': 0.003, # FIXME unused
-                    'corrections': 500 } # FIXME unused
-
-        self.proj = lambda x: simplex_projection(self.block_sizes - 1,x)
-        # self.proj = lambda x: pysimplex_projection(self.block_sizes - 1,x)
-        self.z0 = np.zeros(self.N.shape[1])
-
     def init_metrics(self):
         self.train = {}
         self.test = {}
@@ -130,6 +134,11 @@ class CrossValidation:
                 f = lambda z: 0.5 * la.norm(A_train.dot(self.N.dot(z)) + target)**2
                 nabla_f = lambda z: self.NT.dot(AT.dot(A_train.dot(self.N.dot(z)) \
                         + target))
+            elif self.reg == 'L2' and self.weights:
+                f = lambda z: 0.5 * la.norm(A_train.dot(self.N.dot(z)) + target)**2 + 0.5 * la.norm(self.D*(self.N.dot(z) + self.x0))**2
+                nabla_f = lambda z: self.NT.dot(AT.dot(A_train.dot(self.N.dot(z)) \
+                        + target)) + self.NT.dot(self.D2 * (self.N.dot(z) + \
+                        self.x0))
             elif self.reg == 'L2':
                 f = lambda z: 0.5 * la.norm(A_train.dot(self.N.dot(z)) + target)**2 + 0.5 * la.norm(self.N.dot(z) + self.x0)**2
                 nabla_f = lambda z: self.NT.dot(AT.dot(A_train.dot(self.N.dot(z)) \
@@ -410,16 +419,17 @@ if __name__ == "__main__":
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # Parameters
-    e = 0.01
+    e = 0.02
     k = 3
-    m = 10 # multiplier
-    k_type = 'city_ids'
+    m = 30 # multiplier
+    k_type = None #'city_ids'
     reg = 'L2'
+    weights = None # 'travel_time'
 
     # Set up CV for different algorithms
-    cv1 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,solver='BB',var='z',iter=20*m)
-    cv2 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,solver='DORE',var='z',iter=12*m)
-    cv3 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,solver='LBFGS',var='z',iter=5*m)
+    cv1 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,weights=weights,solver='BB',var='z',iter=20*m)
+    cv2 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,weights=weights,solver='DORE',var='z',iter=12*m)
+    cv3 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,weights=weights,solver='LBFGS',var='z',iter=5*m)
 
     # Run each algorithm and compute metrics
     cvs = [cv1,cv2,cv3]
