@@ -18,8 +18,13 @@ def solve(x0, f, nabla_f, stopping, record_every=5, proj=None, log=None,
         g = nabla_f(x)
 
         delta_g = g - g_prev
+        if sum(delta_g) == 0:
+            print 'Exiting... no change in gradient'
+            break
         delta_x = x - x_prev
         t = delta_x.dot(delta_g) / delta_g.dot(delta_g) # BB step
+        if np.abs(t) <= 1e-10 or np.abs(t) > 1e10:
+            print 'BB update is having some trouble, implement fix! t=%8.5e' % t
         x_next = x - t * g # next position
 
         x_prev, x = x, x_next # update
@@ -28,7 +33,7 @@ def solve(x0, f, nabla_f, stopping, record_every=5, proj=None, log=None,
         if proj:
             x = proj(x)
         fx = f(x)
-        stop = stopping(g,fx,i,t,options=options)
+        stop = stopping(g,fx,i,t,delta_g=delta_g,options=options)
 
         # Save intermediate state
         if i % record_every == 0:

@@ -38,7 +38,7 @@ def least_squares(x, linop, linop_transpose, target, proj=None, diagnostics=None
     return DORE.solve(x, linop, linop_transpose, target, proj=proj, diagnostics=diagnostics,options=options)
 
 # Stopping condition
-def stopping(g,fx,i,t,d=None,options=None,TOLER=1e-6):
+def stopping(g,fx,i,t,d=None,delta_g=None,options=None,TOLER=1e-6):
     if options and 'max_iter' in options:
         if i >= options['max_iter']:
             return True
@@ -51,8 +51,14 @@ def stopping(g,fx,i,t,d=None,options=None,TOLER=1e-6):
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
     if norm2_nabla_f <= thresh:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
+        logging.debug('Exiting... norm(grad) too small')
         return True
-    if type(d) != type(None) and la.norm(t*d) <= 1e-8:
+    if type(d) != type(None) and la.norm(t*d) <= 1e-12:
         logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
+        logging.debug('Exiting... step too small')
+        return True
+    if type(delta_g) != type(None) and la.norm(delta_g) == 0:
+        logging.info("iter=%d: %e %e %e %f" % (i,t,norm2_nabla_f,thresh,fx))
+        logging.debug('Exiting... no change in gradient')
         return True
     return False

@@ -9,6 +9,7 @@ import time
 def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
     # TODO projected version is much slower but doesn't seem to aid performance?
 
+    i = 1
     alpha, beta = 0, float('inf')
     t = 1
     stop = False
@@ -19,6 +20,10 @@ def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
     while not stop:
         # print t, x
         proj_xtd = proj(x + t*d)
+
+        i += 1
+        if i >= 1000:
+            print np.abs(alpha-beta), t, alpha, beta
 
         # armijo condition violated
         if f(proj_xtd) >= f(proj_x) + c1 * t * d.dot(nabla_fx):
@@ -31,10 +36,11 @@ def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
             # print 'cc', d.dot(nabla_f(proj_xtd)),c2*d.dot(nabla_fx),alpha,beta,t
             alpha = t
             t = 2 * alpha if beta == float('inf') else 0.5 * (alpha + beta)
-            if np.abs(alpha-beta) <= 1e-15:
-                stop = True
         # both conditions pass
         else:
+            stop = True
+
+        if np.abs(alpha-beta) <= 1e-14:
             stop = True
         
         if la.norm(t*d) <= 1e-8:
@@ -98,8 +104,8 @@ def solve(x0, f, nabla_f, stopping, m=10,record_every=5,proj=None, log=None,
         y_new = g_new - g 
         if y_new.dot(s_new) == 0:
             print "iter=%d, f=%8.5e" % (i,f(x_next))
-            import ipdb
-            ipdb.set_trace()
+            print "Exiting... no change in gradient"
+            break
         rho_new = 1 / (y_new.dot(s_new))
 
         x = x_next

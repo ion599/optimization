@@ -20,6 +20,8 @@ def parser():
             default='WARN', help='Set log level (default: WARN)')
     parser.add_argument('--solver',dest='solver',type=str,default='LBFGS',
             help='Solver name')
+    parser.add_argument('--noise',dest='noise',type=float,default=None,
+            help='Noise level')
     return parser
 
 def main():
@@ -32,6 +34,11 @@ def main():
     A, b, N, block_sizes, x_true, nz = util.load_data(args.file)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
+
+    if args.noise:
+        b_true = b
+        delta = np.random.normal(scale=b*args.noise)
+        b = b + delta
 
     # Sample usage
     #P = A.T.dot(A)
@@ -100,14 +107,20 @@ def main():
     logging.debug("Shape of x_hat: %s" % repr(x_hat.shape))
 
     starting_error = 0.5 * la.norm(A.dot(x0)-b)**2
+    opt_error = 0.5 * la.norm(A.dot(x_true)-b)**2
     diff = A.dot(x_hat) - np.tile(b,(d,1)).T
     error = 0.5 * np.diag(diff.T.dot(diff))
 
     dist_from_true = np.max(np.abs(x_last-x_true))
     start_dist_from_true = np.max(np.abs(x_last-x0))
 
-    print '0.5norm(A*x-b)^2: %8.5e\n0.5norm(A*x_init-b)^2: %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n' % \
-        (error[-1], starting_error, dist_from_true,start_dist_from_true)
+    x_diff = x_true - x_last
+    print 'incorrect x entries: %s' % x_diff[np.abs(x_diff) > 1e-3].shape[0]
+    print '0.5norm(A*x-b)^2: %8.5e\n0.5norm(A*x_init-b)^2: %8.5e\n0.5norm(A*x*-b)^2: %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n' % \
+        (error[-1], starting_error, opt_error, dist_from_true,start_dist_from_true)
+    import ipdb
+    ipdb.set_trace()
+
     plt.figure()
     plt.hist(x_last)
 

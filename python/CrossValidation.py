@@ -54,7 +54,7 @@ class CrossValidation:
         logging.debug("Blocks: %s" % self.block_sizes.shape)
 
         self.options = { 'max_iter': self.iter,
-                    'verbose': 0,
+                    'verbose': 1,
                     'suff_dec': 0.003, # FIXME unused
                     'corrections': 500 } # FIXME unused
 
@@ -227,11 +227,11 @@ class CrossValidation:
             # Aggregate error
             m = metrics(A_train,b_train,self.x_hat)
             self.train = populate(self.train,m)
-            logging.debug('Train: %8.5e to %8.5e' % (m['RMSE'][0],m['RMSE'][-1]))
+            logging.debug('Train: %8.5e to %8.5e (%8.5e)' % (m['RMSE'][0],m['RMSE'][-1],m['RMSE'][0]-m['RMSE'][-1]))
 
             m = metrics(A_test,b_test,self.x_hat)
             self.test = populate(self.test,m)
-            logging.debug('Test: %8.5e to %8.5e' % (m['RMSE'][0],m['RMSE'][-1]))
+            logging.debug('Test: %8.5e to %8.5e (%8.5e)' % (m['RMSE'][0],m['RMSE'][-1],m['RMSE'][0]-m['RMSE'][-1]))
 
             # TODO deprecate
             x_last = self.x_hat[:,-1]
@@ -419,12 +419,12 @@ if __name__ == "__main__":
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # Parameters
-    e = 0.02
+    e = 0.04
     k = 3
-    m = 30 # multiplier
-    k_type = None #'city_ids'
+    m = 100 # multiplier
+    k_type = 'city_ids' #'city_ids'
     reg = 'L2'
-    weights = None # 'travel_time'
+    weights = 'travel_time' # 'travel_time'
 
     # Set up CV for different algorithms
     cv1 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,weights=weights,solver='BB',var='z',iter=20*m)
@@ -432,7 +432,7 @@ if __name__ == "__main__":
     cv3 = CrossValidation(k=k,f=args.file,noise=e,k_type=k_type,reg=reg,weights=weights,solver='LBFGS',var='z',iter=5*m)
 
     # Run each algorithm and compute metrics
-    cvs = [cv1,cv2,cv3]
+    cvs = [cv3,cv1,cv2]
     colors = ['b','m','g']
     # cvs = [cv1,cv2]
     # colors = ['b','m']

@@ -6,12 +6,13 @@ setup_params
 test = 'z';
 % test = 'dense-z';
 
-noise = 0.0; % sets noise level
+noise = 0.02; % sets noise level
 
 % select data input
 % data_file = 'smaller_data';
 data_file = 'stevesSmallData';
 % data_file = 'stevesData';
+data_fie = 'experiment1_matrices';
 
 load(sprintf('%s/%s.mat', DATA_DIR, data_file))
 

@@ -101,28 +101,36 @@ def load_weights(filename,block_sizes,weight=1):
 def load_data(filename):
     logging.debug('Loading %s...' % filename)
     data = sio.loadmat(filename)
-
     logging.debug('Unpacking...')
+
     if data.has_key('phi'):
         A = data['phi']
     else:
         A = data['A']
     A = A.tocsr()
-    # Remove rows of zeros
+    # Remove rows of zeros (unused sensors)
     nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
     nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
     A = sps.lil_matrix(A[nnz,:]).tocsr()
-
-    if data.has_key('block_sizes'):
-        block_sizes = data['block_sizes']
-    elif data.has_key('U'):
-        block_sizes = block_sizes_from_U(data['U']).astype(int)
 
     if data.has_key('x'):
         x_true = data['x']
     else:
         x_true = data['real_a']
     x_true = np.squeeze(np.array(x_true))
+
+    # Reorder routes by blocks of flow, e.g. OD flow or waypoint flow given by U
+    if data.has_key('block_sizes'):
+        block_sizes = data['block_sizes']
+    elif data.has_key('U'):
+        U = data['U'].tocsr()
+        rank = U.nonzero()[0]
+        sort_index = np.argsort(rank)
+        U = sps.lil_matrix(U[:,sort_index]).tocsr() # reorder
+        A = sps.lil_matrix(A[:,sort_index]).tocsr() # reorder
+        x_true = x_true[sort_index] # reorder
+
+        block_sizes = block_sizes_from_U(U).astype(int)
 
     # if data.has_key('b'):
     #     b = data['b']
