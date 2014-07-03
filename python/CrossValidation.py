@@ -37,7 +37,7 @@ class CrossValidation:
 
     def setup(self):
         # load data
-        self.A,self.b,self.N,self.block_sizes,self.x_true,self.nz = \
+        self.A,self.b,self.N,self.block_sizes,self.x_true,self.nz,self.f = \
                 util.load_data(self.f)
         self.NT = self.N.T.tocsr()
 

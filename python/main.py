@@ -31,7 +31,7 @@ def main():
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # load data
-    A, b, N, block_sizes, x_true, nz = util.load_data(args.file)
+    A, b, N, block_sizes, x_true, nz, flow = util.load_data(args.file)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
 
@@ -116,6 +116,8 @@ def main():
 
     x_diff = x_true - x_last
     print 'incorrect x entries: %s' % x_diff[np.abs(x_diff) > 1e-3].shape[0]
+    per_flow = np.sum(np.abs(flow * (x_last-x_true))) / np.sum(flow * x_true)
+    print 'percent flow allocated incorrectly: %f' % per_flow
     print '0.5norm(A*x-b)^2: %8.5e\n0.5norm(A*x_init-b)^2: %8.5e\n0.5norm(A*x*-b)^2: %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n' % \
         (error[-1], starting_error, opt_error, dist_from_true,start_dist_from_true)
     import ipdb

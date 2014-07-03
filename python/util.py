@@ -119,6 +119,13 @@ def load_data(filename):
         x_true = data['real_a']
     x_true = np.squeeze(np.array(x_true))
 
+    if data.has_key('f'):
+        f = data['f']
+    else:
+        f = np.squeeze(A.sum(axis=0)/(A > 0).sum(axis=0))
+        f[np.isnan(f)]=0 # FIXME this is not accurate
+    f = np.squeeze(np.array(f))
+
     # Reorder routes by blocks of flow, e.g. OD flow or waypoint flow given by U
     if data.has_key('block_sizes'):
         block_sizes = data['block_sizes']
@@ -145,7 +152,7 @@ def load_data(filename):
 
     logging.debug('File loaded successfully')
 
-    return (A, b, N, block_sizes, x_true, nz)
+    return (A, b, N, block_sizes, x_true, nz, f)
 
 def AN(A,N):
     # TODO port from preADMM.m (lines 3-21)
