@@ -3,18 +3,12 @@ Convex optimization for traffic assignment
 
 Setup
 -----
-Python dependencies (once only):
+To run the MATLAB implementation, see [MATLAB setup](#matlab-setup)
+
+Python dependencies:
 
     sudo easy_install pip
     pip install -r requirements.txt
-
-MATLAB dependencies (must be run every time MATLAB is started):
-
-    setup.m
-
-Running via MATLAB
--------------------
-Run `main.m`.
 
 Running via Python
 -------------------
@@ -34,6 +28,17 @@ To run 3-fold cross validation test:
 ```
 python CrossValidation.py --log=DEBUG
 ```
+
+MATLAB setup
+------------
+<a name="matlab-setup"></a>
+MATLAB dependencies (must be run every time MATLAB is started):
+
+    setup.m
+
+Running via MATLAB
+-------------------
+Run `main.m`.
 
 References
 --------

@@ -15,7 +15,7 @@ import config as c
 def parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', help='Data file (*.mat)',
-                        default='data/stevesSmallData.mat')
+                        default='experiment_matrices/route_assignment_matrices_ntt.mat')
     parser.add_argument('--log', dest='log', nargs='?', const='INFO',
             default='WARN', help='Set log level (default: WARN)')
     parser.add_argument('--solver',dest='solver',type=str,default='LBFGS',
@@ -31,7 +31,8 @@ def main():
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # load data
-    A, b, N, block_sizes, x_true, nz, flow = util.load_data(args.file)
+    filepath = '%s/%s' % (c.DATA_DIR, args.file)
+    A, b, N, block_sizes, x_true, nz, flow = util.load_data(filepath)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
 
