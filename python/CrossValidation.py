@@ -63,8 +63,8 @@ class CrossValidation:
         self.z0 = np.zeros(self.N.shape[1])
 
         if self.reg and self.weights == 'travel_time':
-            self.D = util.load_weights('%s/travel_times.pkl' % c.DATA_DIR,
-                    self.block_sizes,weight=1)
+            self.D = util.load_weights('%s/%s/travel_times.pkl' % (c.DATA_DIR,
+                    c.ESTIMATION_INFO_DIR), self.block_sizes,weight=1)
             self.D2 = self.D*self.D
 
     def setup_kf(self,k=3,k_type=None):
@@ -74,14 +74,16 @@ class CrossValidation:
             self.k = k
         elif self.k_type == 'taz_ids':
             import pickle
-            with open('%s/taz_ids.pkl' % c.DATA_DIR) as f:
+            with open('%s/%s/taz_ids.pkl' % (c.DATA_DIR,
+                c.ESTIMATION_INFO_DIR)) as f:
                 ids = pickle.load(f)
             labels=[int(id) for (ind,id) in ids if ind not in self.nz]
             self.kf = LeaveOneLabelOut(labels=labels)
             self.k = self.kf.n_unique_labels
         elif self.k_type == 'city_ids':
             import pickle
-            with open('%s/city_ids.pkl' % c.DATA_DIR) as f:
+            with open('%s/%s/city_ids.pkl' % (c.DATA_DIR,
+                c.ESTIMATION_INFO_DIR)) as f:
                 ids = pickle.load(f)
             # FIXME caution, cities with no id are all grouped together
             labels=[int(id) if id else 0 for (ind,id) in ids if ind not in self.nz]
@@ -89,7 +91,8 @@ class CrossValidation:
             self.k = self.kf.n_unique_labels
         elif self.k_type == 'street_names':
             import pickle
-            with open('%s/street_names.pkl' % c.DATA_DIR) as f:
+            with open('%s/%s/street_names.pkl' % (c.DATA_DIR,
+                c.ESTIMATION_INFO_DIR)) as f:
                 ids = pickle.load(f)
             labels=[id for (ind,id) in ids if ind not in self.nz]
             self.k = k

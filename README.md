@@ -23,9 +23,9 @@ Run the python implementation from the `traffic-estimation/python` directory.
 To run the main test, see these examples:
 ```
 cd ~/traffic-estimation/python
-python main.py --file data/stevesSmallData.mat --log=DEBUG --solver LBFGS
-python main.py --file data/stevesSmallData.mat --log=DEBUG --solver BB
-python main.py --file data/stevesSmallData.mat --log=DEBUG --solver DORE
+python main.py --file route_assignment_matrices_ntt.mat --log=DEBUG --solver LBFGS
+python main.py --file route_assignment_matrices_ntt.mat --log=DEBUG --solver BB
+python main.py --file route_assignment_matrices_ntt.mat --log=DEBUG --solver DORE
 ```
 If the dataset you want to run is not in the data directory, symlink it in
 from the main dataset.
