@@ -10,6 +10,12 @@ Python dependencies:
     sudo easy_install pip
     pip install -r requirements.txt
 
+Also needed is scipy. If you find some missing dependencies, please add them here.
+
+To build the simplex projection c extension:
+1. `cd` into `python/c_extensions`
+2. run `python2 setup.py build_ext --inplace`
+
 Running via Python
 -------------------
 Run the python implementation from the `traffic-estimation/python` directory.
