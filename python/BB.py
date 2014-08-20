@@ -3,7 +3,7 @@ import numpy.linalg as la
 import time
 
 # Barzilai-Borwein (BB)
-def solve(x0, f, nabla_f, stopping, record_every=5, proj=None, log=None,
+def solve(x0, f, nabla_f, stopping, record_every=500, proj=None, log=None,
         options=None):
     # Save initial state
     start = log(0,x0,0)

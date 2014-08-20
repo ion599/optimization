@@ -23,15 +23,34 @@ def parser():
     parser.add_argument('--noise',dest='noise',type=float,default=None,
             help='Noise level')
     return parser
+def solve(z0, f, nabla_f, stopping, log, proj, options):
+    preconditionoptions = { 'max_iter': 1000,
+                'verbose': 1,
+                'suff_dec': 0.003, # FIXME unused
+                'corrections': 500 } # FIXME unused
+    z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
+                options=preconditionoptions)
+    restart = 0
+    while restart < 3:
+        restart += 1
+        z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
+                    options=preconditionoptions)
+        try:
+            z0 = LBFGS.solve(z0, f, nabla_f, stopping, log=log,proj=proj,
+                    options=options)
+            break
+        except ArithmeticError:
+            pass
+    return z0
 
-def main():
+def main(filepath):
     p = parser()
     args = p.parse_args()
     if args.log in c.ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # load data
-    filepath = '%s/%s/%s' % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, args.file)
+    filepath = '%s/%s/%s' % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, filepath)
     A, b, N, block_sizes, x_true, nz, flow = util.load_data(filepath)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
@@ -51,7 +70,7 @@ def main():
     x0 = np.array(util.block_e(block_sizes - 1, block_sizes))
     target = A.dot(x0)-b
 
-    options = { 'max_iter': 5000,
+    options = { 'max_iter': 2500,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
@@ -97,6 +116,9 @@ def main():
                 lambda b: N.T.dot(A_dore.T.dot(b)), target_dore, proj=proj,
                 log=log,options=options)
         A_dore = None
+    elif args.solver == 'COMBINED':
+        solve(z0, f, nabla_f, solvers.stopping, log=log, proj=proj, options=options)
+
     logging.debug('Stopping %s solver...' % args.solver)
 
     # Plot some stuff
@@ -121,17 +143,26 @@ def main():
     print 'percent flow allocated incorrectly: %f' % per_flow
     print '0.5norm(A*x-b)^2: %8.5e\n0.5norm(A*x_init-b)^2: %8.5e\n0.5norm(A*x*-b)^2: %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n' % \
         (error[-1], starting_error, opt_error, dist_from_true,start_dist_from_true)
-    import ipdb
-    ipdb.set_trace()
-
-    plt.figure()
-    plt.hist(x_last)
-
-    plt.figure()
-    plt.loglog(np.cumsum(times),error)
-    plt.show()
+    # import ipdb
+    # ipdb.set_trace()
+    #
+    # plt.figure()
+    # plt.hist(x_last)
+    #
+    # plt.figure()
+    # plt.loglog(np.cumsum(times),error)
+    # plt.show()
 
     return iters, times, states
 
 if __name__ == "__main__":
-    iters, times, states = main()
+    for i in [10, 20, 30, 40, 50]:
+        infile = "experiment2_control_matrices_routes_%s.mat" % i
+        iters, times, states = main(infile)
+        outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, i)
+        sio.savemat(outputfile, {'iters':iters,'times':times,'states':states})
+    for i in []:#3, 10, 20, 30, 40, 50]:
+        infile = "experiment2_waypoints_matrices_routes_%s.mat" % i
+        iters, times, states = main(infile)
+        outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, i)
+        sio.savemat(outputfile, {'iters':iters,'times':times,'states':states})
