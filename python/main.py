@@ -24,7 +24,7 @@ def parser():
             help='Noise level')
     return parser
 def solve(z0, f, nabla_f, stopping, log, proj, options):
-    preconditionoptions = { 'max_iter': 1000,
+    preconditionoptions = { 'max_iter': 10000,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
@@ -33,14 +33,14 @@ def solve(z0, f, nabla_f, stopping, log, proj, options):
     restart = 0
     while restart < 3:
         restart += 1
-        z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
-                    options=preconditionoptions)
         try:
             z0 = LBFGS.solve(z0, f, nabla_f, stopping, log=log,proj=proj,
                     options=options)
             break
         except ArithmeticError:
             pass
+        z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
+            options=preconditionoptions)
     return z0
 
 def main(filepath):
@@ -117,7 +117,7 @@ def main(filepath):
                 log=log,options=options)
         A_dore = None
     elif args.solver == 'COMBINED':
-        solve(z0, f, nabla_f, solvers.stopping, log=log, proj=proj, options=options)
+        x_sol = solve(z0, f, nabla_f, solvers.stopping, log=log, proj=proj, options=options)
 
     logging.debug('Stopping %s solver...' % args.solver)
 
@@ -153,16 +153,16 @@ def main(filepath):
     # plt.loglog(np.cumsum(times),error)
     # plt.show()
 
-    return iters, times, states
+    return x_sol, f(x_sol)
 
 if __name__ == "__main__":
-    for i in [10, 20, 30, 40, 50]:
+    for i in [3, 10, 20, 30, 40, 50]:
         infile = "experiment2_control_matrices_routes_%s.mat" % i
-        iters, times, states = main(infile)
+        x, fx = main(infile)
         outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, i)
-        sio.savemat(outputfile, {'iters':iters,'times':times,'states':states})
-    for i in []:#3, 10, 20, 30, 40, 50]:
+        sio.savemat(outputfile, {'x':x,'fx':fx})
+    for i in [3, 10, 20, 30, 40, 50]:
         infile = "experiment2_waypoints_matrices_routes_%s.mat" % i
-        iters, times, states = main(infile)
+        x, fx = main(infile)
         outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, i)
-        sio.savemat(outputfile, {'iters':iters,'times':times,'states':states})
+        sio.savemat(outputfile, {'x':x,'fx':fx})
