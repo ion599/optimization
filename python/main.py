@@ -162,7 +162,7 @@ if __name__ == "__main__":
     for d in density:
         matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
         for i in [3, 10, 20, 30, 40, 50]:
-            infile = "experiment2_control_matrices_routes_%s.mat" % i
+            infile = "%s/experiment2_control_matrices_routes_%s.mat" % (d,i)
             x, fx = main(infile)
             outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, matrix_dir, i)
             sio.savemat(outputfile, {'x':x,'fx':fx})
