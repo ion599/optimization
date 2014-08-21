@@ -85,8 +85,8 @@ def main(filepath):
         # projected_value = pysimplex_projection(block_sizes - 1,x)
         return projected_value
 
-    z0 = np.zeros(N.shape[1])
-
+    #z0 = np.zeros(N.shape[1])
+    z0 = np.random.random(N.shape[1])
     import time
     iters, times, states = [], [], []
     def log(iter_,state,duration):
@@ -117,7 +117,7 @@ def main(filepath):
                 log=log,options=options)
         A_dore = None
     elif args.solver == 'COMBINED':
-        x_sol = solve(z0, f, nabla_f, solvers.stopping, log=log, proj=proj, options=options)
+        z_sol = solve(z0, f, nabla_f, solvers.stopping, log=log, proj=proj, options=options)
 
     logging.debug('Stopping %s solver...' % args.solver)
 
@@ -153,16 +153,19 @@ def main(filepath):
     # plt.loglog(np.cumsum(times),error)
     # plt.show()
 
-    return x_sol, f(x_sol)
+    return N*z_sol, f(z_sol)
 
 if __name__ == "__main__":
-    for i in [3, 10, 20, 30, 40, 50]:
-        infile = "experiment2_control_matrices_routes_%s.mat" % i
-        x, fx = main(infile)
-        outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, i)
-        sio.savemat(outputfile, {'x':x,'fx':fx})
-    for i in [3, 10, 20, 30, 40, 50]:
-        infile = "experiment2_waypoints_matrices_routes_%s.mat" % i
-        x, fx = main(infile)
-        outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, i)
-        sio.savemat(outputfile, {'x':x,'fx':fx})
+    density = [3800,2000,1900,1800,950,475,238]
+    for d in density:
+        matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
+        for i in [3, 10, 20, 30, 40, 50]:
+            infile = "experiment2_control_matrices_routes_%s.mat" % i
+            x, fx = main(infile)
+            outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, matrix_dir, i)
+            sio.savemat(outputfile, {'x':x,'fx':fx})
+        for i in [3, 10, 20, 30, 40, 50]:
+            infile = "experiment2_waypoints_matrices_routes_%s.mat" % i
+            x, fx = main(infile)
+            outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, matrix_dir, i)
+            sio.savemat(outputfile, {'x':x,'fx':fx})
