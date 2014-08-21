@@ -24,21 +24,22 @@ def parser():
             help='Noise level')
     return parser
 def solve(z0, f, nabla_f, stopping, log, proj, options):
-    preconditionoptions = { 'max_iter': 10000,
+    preconditionoptions = { 'max_iter': 1000,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
     z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
                 options=preconditionoptions)
     restart = 0
-    while restart < 3:
+    while restart < 10 and f(z0) > 1:
         restart += 1
         try:
             z0 = LBFGS.solve(z0, f, nabla_f, stopping, log=log,proj=proj,
-                    options=options)
+                    options=options) 
             break
         except ArithmeticError:
             pass
+        print('restarting')
         z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
             options=preconditionoptions)
     return z0
@@ -70,7 +71,7 @@ def main(filepath):
     x0 = np.array(util.block_e(block_sizes - 1, block_sizes))
     target = A.dot(x0)-b
 
-    options = { 'max_iter': 2500,
+    options = { 'max_iter': 5000,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
@@ -87,6 +88,7 @@ def main(filepath):
 
     #z0 = np.zeros(N.shape[1])
     z0 = np.random.random(N.shape[1])
+
     import time
     iters, times, states = [], [], []
     def log(iter_,state,duration):
