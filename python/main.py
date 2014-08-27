@@ -78,11 +78,12 @@ def main(filepath):
     AT = A.T.tocsr()
     NT = N.T.tocsr()
 
-    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
-    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
+    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
+    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
-    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * la.norm(N.dot(z) + x0)**2
-    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + NT.dot(N.dot(z) + x0)
+    # regularization included
+    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * la.norm(N.dot(z) + x0)**2
+    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + NT.dot(N.dot(z) + x0)
 
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
@@ -161,7 +162,7 @@ def main(filepath):
     return z_sol, f(z_sol)
 
 if __name__ == "__main__":
-    density = [3800,2000,1900,1800,950,475,238]
+    density = [3800,2850,1900,1425,950,713,475,238]
     for i in [3, 10, 20, 30, 40, 50]:
         matrix_dir = "{0}".format(c.EXPERIMENT_MATRICES_DIR)
         infile = "%s/experiment2_control_matrices_routes_%s.mat" % (d,i)
