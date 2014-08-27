@@ -78,12 +78,14 @@ def main(filepath):
     AT = A.T.tocsr()
     NT = N.T.tocsr()
 
-    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
-    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
+    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
+    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
     # regularization included
-    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * la.norm(N.dot(z) + x0)**2
-    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + NT.dot(N.dot(z) + x0)
+    lamb = 1.0/N.shape[1]
+
+    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * lamb * la.norm(N.dot(z) + x0)**2
+    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + lamb * NT.dot(N.dot(z) + x0)
 
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
@@ -104,11 +106,11 @@ def main(filepath):
 
     logging.debug('Starting %s solver...' % args.solver)
     if args.solver == 'LBFGS':
-        LBFGS.solve(z0+1, f, nabla_f, solvers.stopping, log=log,proj=proj,
+        z_sol = LBFGS.solve(z0+1, f, nabla_f, solvers.stopping, log=log,proj=proj,
                 options=options)
         logging.debug("Took %s time" % str(np.sum(times)))
     elif args.solver == 'BB':
-        BB.solve(z0,f,nabla_f,solvers.stopping,log=log,proj=proj,
+        z_sol = BB.solve(z0,f,nabla_f,solvers.stopping,log=log,proj=proj,
                 options=options)
     elif args.solver == 'DORE':
         # setup for DORE
@@ -163,16 +165,10 @@ def main(filepath):
 
 if __name__ == "__main__":
     density = [3800,2850,1900,1425,950,713,475,238]
-    for i in [3, 10, 20, 30, 40, 50]:
-        matrix_dir = "{0}".format(c.EXPERIMENT_MATRICES_DIR)
-        infile = "%s/experiment2_control_matrices_routes_%s.mat" % (d,i)
-        x, fx = main(infile)
-        outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, matrix_dir, i)
-        sio.savemat(outputfile, {'x':x,'fx':fx})
     for d in density:
         matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
         for i in [3, 10, 20, 30, 40, 50]:
-            infile = "experiment2_waypoints_matrices_routes_%s.mat" % i
+            infile = "%s/experiment2_waypoints_matrices_routes_%s.mat" % (d,i)
             x, fx = main(infile)
             outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, matrix_dir, i)
             sio.savemat(outputfile, {'x':x,'fx':fx})
