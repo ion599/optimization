@@ -108,13 +108,15 @@ def read_ranks(density):
     def rank(A,U):
         stacked = scipy.sparse.vstack((A, U))
         g = lambda x: stacked*x
-        lo = LinearOperator(stacked.shape, g, dtype=np.float64)
+        gt = lambda x: stacked.T*x
+        lo = LinearOperator(shape=stacked.shape, matvec=g, rmatvec=gt, matmat=g, dtype=np.float64)
         return inter.estimate_rank(lo, 1e-6)
     return [rank(A,U) for A, U in [readAU(f) for f in mf]]
 if __name__== '__main__':
     density = [3800,2000,1900,1800,950,475,238]
-    #stats = {d:plot_GEH_vs_route_number_waypoints("{0}/{1}".format(BASE_DIR,d), "{0}/{1}".format(config.PLOT_DIR, d)) for d in density}
-    print(read_ranks(density[0]))
+    stats = {d:plot_GEH_vs_route_number_waypoints("{0}/{1}".format(BASE_DIR,d), "{0}/{1}".format(config.PLOT_DIR, d)) for d in density}
+    pickle.dump(stats, open(config.PLOT_DIR +'/stats.pkl','w'))
+    #print(read_ranks(density[0]))
 
-    #pickle.dump(stats, config.PLOT_DIR +'\stats.pkl')
+
 

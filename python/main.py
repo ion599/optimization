@@ -78,8 +78,11 @@ def main(filepath):
     AT = A.T.tocsr()
     NT = N.T.tocsr()
 
-    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
-    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
+    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
+    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
+
+    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * la.norm(N.dot(z) + x0)**2
+    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + NT.dot(N.dot(z) + x0)
 
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
@@ -155,17 +158,18 @@ def main(filepath):
     # plt.loglog(np.cumsum(times),error)
     # plt.show()
 
-    return N*z_sol, f(z_sol)
+    return z_sol, f(z_sol)
 
 if __name__ == "__main__":
     density = [3800,2000,1900,1800,950,475,238]
+    for i in [3, 10, 20, 30, 40, 50]:
+        matrix_dir = "{0}".format(c.EXPERIMENT_MATRICES_DIR)
+        infile = "%s/experiment2_control_matrices_routes_%s.mat" % (d,i)
+        x, fx = main(infile)
+        outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, matrix_dir, i)
+        sio.savemat(outputfile, {'x':x,'fx':fx})
     for d in density:
         matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
-        for i in [3, 10, 20, 30, 40, 50]:
-            infile = "%s/experiment2_control_matrices_routes_%s.mat" % (d,i)
-            x, fx = main(infile)
-            outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, matrix_dir, i)
-            sio.savemat(outputfile, {'x':x,'fx':fx})
         for i in [3, 10, 20, 30, 40, 50]:
             infile = "experiment2_waypoints_matrices_routes_%s.mat" % i
             x, fx = main(infile)
