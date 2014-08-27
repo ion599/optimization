@@ -24,21 +24,22 @@ def parser():
             help='Noise level')
     return parser
 def solve(z0, f, nabla_f, stopping, log, proj, options):
-    preconditionoptions = { 'max_iter': 10000,
+    preconditionoptions = { 'max_iter': 1000,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
     z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
                 options=preconditionoptions)
     restart = 0
-    while restart < 3:
+    while restart < 10 and f(z0) > 1:
         restart += 1
         try:
             z0 = LBFGS.solve(z0, f, nabla_f, stopping, log=log,proj=proj,
-                    options=options)
+                    options=options) 
             break
         except ArithmeticError:
             pass
+        print('restarting')
         z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
             options=preconditionoptions)
     return z0
@@ -70,7 +71,7 @@ def main(filepath):
     x0 = np.array(util.block_e(block_sizes - 1, block_sizes))
     target = A.dot(x0)-b
 
-    options = { 'max_iter': 2500,
+    options = { 'max_iter': 5000,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
@@ -80,12 +81,17 @@ def main(filepath):
     f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
     nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
+    # regularization included
+    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * la.norm(N.dot(z) + x0)**2
+    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + NT.dot(N.dot(z) + x0)
+
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
         # projected_value = pysimplex_projection(block_sizes - 1,x)
         return projected_value
 
-    z0 = np.zeros(N.shape[1])
+    #z0 = np.zeros(N.shape[1])
+    z0 = np.random.random(N.shape[1])
 
     import time
     iters, times, states = [], [], []
@@ -117,7 +123,7 @@ def main(filepath):
                 log=log,options=options)
         A_dore = None
     elif args.solver == 'COMBINED':
-        x_sol = solve(z0, f, nabla_f, solvers.stopping, log=log, proj=proj, options=options)
+        z_sol = solve(z0, f, nabla_f, solvers.stopping, log=log, proj=proj, options=options)
 
     logging.debug('Stopping %s solver...' % args.solver)
 
@@ -153,16 +159,20 @@ def main(filepath):
     # plt.loglog(np.cumsum(times),error)
     # plt.show()
 
-    return x_sol, f(x_sol)
+    return z_sol, f(z_sol)
 
 if __name__ == "__main__":
+    density = [3800,2850,1900,1425,950,713,475,238]
     for i in [3, 10, 20, 30, 40, 50]:
-        infile = "experiment2_control_matrices_routes_%s.mat" % i
+        matrix_dir = "{0}".format(c.EXPERIMENT_MATRICES_DIR)
+        infile = "%s/experiment2_control_matrices_routes_%s.mat" % (d,i)
         x, fx = main(infile)
-        outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, i)
+        outputfile = "%s/%s/output_control%s.mat" % (c.DATA_DIR, matrix_dir, i)
         sio.savemat(outputfile, {'x':x,'fx':fx})
-    for i in [3, 10, 20, 30, 40, 50]:
-        infile = "experiment2_waypoints_matrices_routes_%s.mat" % i
-        x, fx = main(infile)
-        outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, i)
-        sio.savemat(outputfile, {'x':x,'fx':fx})
+    for d in density:
+        matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
+        for i in [3, 10, 20, 30, 40, 50]:
+            infile = "experiment2_waypoints_matrices_routes_%s.mat" % i
+            x, fx = main(infile)
+            outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, matrix_dir, i)
+            sio.savemat(outputfile, {'x':x,'fx':fx})
