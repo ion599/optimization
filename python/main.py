@@ -82,8 +82,10 @@ def main(filepath):
     #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
     # regularization included
-    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * la.norm(N.dot(z) + x0)**2
-    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + NT.dot(N.dot(z) + x0)
+    lamb = 1.0/N.shape[1]
+
+    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * lamb * la.norm(N.dot(z) + x0)**2
+    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + lamb * NT.dot(N.dot(z) + x0)
 
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
