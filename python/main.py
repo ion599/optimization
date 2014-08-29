@@ -44,6 +44,9 @@ def solve(z0, f, nabla_f, stopping, log, proj, options):
             options=preconditionoptions)
     return z0
 
+def homotopySolver(z0, f, nabla_f, stopping, log, proj, options):
+    pass
+
 def main(filepath):
     p = parser()
     args = p.parse_args()
@@ -78,14 +81,14 @@ def main(filepath):
     AT = A.T.tocsr()
     NT = N.T.tocsr()
 
-    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
-    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
+    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
+    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
     # regularization included
-    lamb = 1.0/N.shape[1]
+    #lamb = 1.0/N.shape[1]
 
-    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * lamb * la.norm(N.dot(z) + x0)**2
-    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + lamb * NT.dot(N.dot(z) + x0)
+    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * lamb * la.norm(N.dot(z) + x0)**2
+    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + lamb * NT.dot(N.dot(z) + x0)
 
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
@@ -164,7 +167,7 @@ def main(filepath):
     return z_sol, f(z_sol)
 
 if __name__ == "__main__":
-    density = [3800,2850,1900,1425,950,713,475,238]
+    density = [0]
     for d in density:
         matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
         for i in [3, 10, 20, 30, 40, 50]:

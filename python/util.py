@@ -140,11 +140,11 @@ def load_data(filename):
         block_sizes = block_sizes_from_U(U).astype(int)
 
     # if data.has_key('b'):
-    #     b = data['b']
+    b = data['b']
     # else:
     #     b = data['f']
-    # b = np.squeeze(np.asarray(b))
-    b = A.dot(x_true)
+    b = np.squeeze(np.asarray(b[:,nnz]))
+    #b = A.dot(x_true)
 
     logging.debug('Creating sparse N matrix')
     N = block_sizes_to_N(block_sizes)

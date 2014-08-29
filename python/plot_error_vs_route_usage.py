@@ -8,12 +8,12 @@ import os
 from scipy.sparse.linalg import LinearOperator
 import scipy.linalg.interpolative as inter
 import pickle
-BASE_DIR = '%s/%s'%(config.DATA_DIR, config.EXPERIMENT_MATRICES_DIR)
+BASE_DIR = '/home/lei/traffic/plots/experiment_matrices'#'%s/%s'%(config.DATA_DIR, config.EXPERIMENT_MATRICES_DIR)
 b_50 = None
 def b_estimate():
     global b_50
     if b_50 == None:
-         A, b_50, N, block_sizes, x_true, nz, flow = util.load_data('%s/experiment2_control_matrices_routes_%s.mat'% (BASE_DIR, 50))
+         A, b_50, N, block_sizes, x_true, nz, flow = util.load_data('%s/experiment2_control_matrices_routes_%s.mat'% (BASE_DIR, 2000))
     return b_50
 def read_problem_matrices(filepath):
     A, b, N, block_sizes, x_true, nz, flow = util.load_data(filepath)
@@ -24,7 +24,7 @@ def read_x_computed(filepath, block_sizes, N):
     x0 = np.array([util.block_e(block_sizes - 1, block_sizes)])
     x = matrices['x']
     fx = matrices['fx']
-    x = x0.T + x.T
+    x = x0.T + N*x.T
     return x, fx
 
 def metrics(A,b,X):
@@ -51,7 +51,7 @@ def metrics(A,b,X):
         }
 
 def flowerror(x_sol, x_true, flow):
-     return np.sum(flow * np.abs((x_sol-np.matrix(x_true).T))) / np.sum(flow * x_true)
+    return np.sum(flow * np.abs((x_sol-np.matrix(x_true).T))) / np.sum(flow * x_true)
 
 def get_statistics_from(solution_file, problem_file):
     print problem_file, solution_file
@@ -97,6 +97,7 @@ def plot_GEH_vs_route_number_waypoints(directory, save_directory):
     plot_GEH(routes, statistics, 'flow_per_error', "Maximum Route Number", "Percent Flow Allocated Incorrectly")
     pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'flow_per_error', "png"))
     pyplot.figure()
+    pyplot.close('all')
     return statistics
 def read_ranks(density):
     mf = matrix_files("{0}/{1}".format(BASE_DIR,density))
@@ -107,16 +108,13 @@ def read_ranks(density):
         return A, U
     def rank(A,U):
         stacked = scipy.sparse.vstack((A, U))
-        g = lambda x: stacked*x
-        gt = lambda x: stacked.T*x
-        lo = LinearOperator(shape=stacked.shape, matvec=g, rmatvec=gt, matmat=g, dtype=np.float64)
-        return inter.estimate_rank(lo, 1e-6)
+        print scipy.sparse.issparse(stacked)
+        return scipy.linalg.interpolative.estimate_rank(scipy.sparse.linalg.aslinearoperator(stacked),.1)
+
     return [rank(A,U) for A, U in [readAU(f) for f in mf]]
 if __name__== '__main__':
-    density = [3800,2000,1900,1800,950,475,238]
-    stats = {d:plot_GEH_vs_route_number_waypoints("{0}/{1}".format(BASE_DIR,d), "{0}/{1}".format(config.PLOT_DIR, d)) for d in density}
-    pickle.dump(stats, open(config.PLOT_DIR +'/stats.pkl','w'))
+    #density = [3800,2850,1900,1425,950,713,475,238]
+    #stats = {d:plot_GEH_vs_route_number_waypoints("{0}/{1}".format(BASE_DIR,d), "{0}/{1}".format(config.PLOT_DIR, d)) for d in density}
+    #pickle.dump(stats, open(config.PLOT_DIR +'/stats.pkl','w'))
+    read_ranks(3800)
     #print(read_ranks(density[0]))
-
-
-
