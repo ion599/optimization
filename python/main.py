@@ -167,7 +167,8 @@ def main(filepath):
     return z_sol, f(z_sol)
 
 if __name__ == "__main__":
-    density = [0]
+    density = [3800,2850,1900,1425,950,713,475,238,0]
+    
     for d in density:
         matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
         for i in [3, 10, 20, 30, 40, 50]:
