@@ -145,7 +145,7 @@ def load_data(filename):
     #     b = data['f']
     b = np.squeeze(np.asarray(b[:,nnz]))
     #b = A.dot(x_true)
-
+    #print np.linalg.norm(b-b_false)
     logging.debug('Creating sparse N matrix')
     N = block_sizes_to_N(block_sizes)
     N = N.tocsr()

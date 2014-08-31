@@ -53,7 +53,7 @@ def weak_wolfe_ls(x,d,f,nabla_f,proj=lambda x: x, c1=1e-3,c2=0.9):
     return t
 
 # Limited memory BFGS
-def solve(x0, f, nabla_f, stopping, m=10,record_every=500,proj=None, log=None,
+def solve(x0, f, nabla_f, stopping, m=50,record_every=500,proj=None, log=None,
         options=None):
     # FIXME has issues when x == 0 to start
 

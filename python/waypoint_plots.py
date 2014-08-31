@@ -15,7 +15,8 @@ def correct_for_unmodeled_flow(p, route_number):
 
 def convert_to_waypoint_vs_percent_error(stats, route_index):
     keys = sorted(stats.keys())
-    return keys, [stats[d][route_index]['flow_per_error'] for d in keys]
+    values = [stats[d][route_index]['flow_per_error'] for d in keys]
+    return keys, values
 
 def plot_waypoint_density_vs_error(correction = lambda x, y: x):
     f = open(config.PLOT_DIR + '/stats.pkl')
@@ -26,12 +27,38 @@ def plot_waypoint_density_vs_error(correction = lambda x, y: x):
     plots = []
     for c, i in zip(colors, indexes):
         x, y = convert_to_waypoint_vs_percent_error(stats, i)
-        y = [correction(y_i, routes[i])*100.0 for y_i in y]
-        p, = pyplot.plot(x, y, '-o' + c)
+        y = [correction(y_i, routes[i]) for y_i in y]
+        p, = pyplot.loglog(x, y, '-o' + c)
         plots.append(p)
     pyplot.legend(plots, ['Routes-{0}'.format(i) for i in routes])
     pyplot.xlabel('Waypoint Density')
     pyplot.ylabel('Route Flow Percent Error')
+    pyplot.ylim([0,5])
     pyplot.show()
+def convert_to_route_vs_percent_error(stats, waypoint):
+    routes = [3,10,20,30,40,50]
+    return routes, [s['flow_per_error'] for s in stats[waypoint]]
 
-plot_waypoint_density_vs_error(correct_for_unmodeled_flow)
+def plot_routes_vs_error(plot, correction = lambda x, y: x):
+    f = open(config.PLOT_DIR + '/stats.pkl')
+    stats = pickle.load(f)
+    colors = ['r', 'g', 'b','c','m','k','r','g','b']
+    routes = [3,10,20,30,40,50]
+    waypoints = [3800, 2850, 1900, 1425, 950, 713, 475, 238,0]
+    plots = []
+    for c, w in zip(colors, waypoints):
+        x, y = convert_to_route_vs_percent_error(stats, w)
+        y = [correction(y_i, routes[i]) for i,y_i in enumerate(y)]
+        p, = plot(x, y, '-o' + c)
+        plots.append(p)
+    pyplot.legend(plots, ['Cell Density-{0}'.format(i) for i in waypoints])
+    pyplot.xlabel('Routes')
+    pyplot.ylabel('Route Flow Percent Error')
+    pyplot.ylim([0,5])
+    pyplot.show()
+    pyplot.close('all')
+
+plottypes = [pyplot.plot, pyplot.loglog, pyplot.semilogy]
+for plot in plottypes:
+    plot_routes_vs_error(plot,correct_for_unmodeled_flow)
+    plot_routes_vs_error(plot)

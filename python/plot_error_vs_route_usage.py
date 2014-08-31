@@ -113,8 +113,8 @@ def read_ranks(density):
 
     return [rank(A,U) for A, U in [readAU(f) for f in mf]]
 if __name__== '__main__':
-    #density = [3800,2850,1900,1425,950,713,475,238]
-    #stats = {d:plot_GEH_vs_route_number_waypoints("{0}/{1}".format(BASE_DIR,d), "{0}/{1}".format(config.PLOT_DIR, d)) for d in density}
-    #pickle.dump(stats, open(config.PLOT_DIR +'/stats.pkl','w'))
-    read_ranks(3800)
+    density = [3800,2850,1900,1425,950,713,475,238,0]
+    stats = {d:plot_GEH_vs_route_number_waypoints("{0}/{1}".format(BASE_DIR,d), "{0}/{1}".format(config.PLOT_DIR, d)) for d in density}
+    pickle.dump(stats, open(config.PLOT_DIR +'/stats.pkl','w'))
+    #read_ranks(3800)
     #print(read_ranks(density[0]))

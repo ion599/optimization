@@ -9,7 +9,7 @@ import solvers
 import util
 from c_extensions.simplex_projection import simplex_projection
 # from projection import pysimplex_projection
-import BB, LBFGS, DORE
+import BB, LBFGS, DORE, continuation_solver
 import config as c
 
 def parser():
@@ -85,18 +85,19 @@ def main(filepath):
     nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
     # regularization included
+    lamb = 1
     #lamb = 1.0/N.shape[1]
 
-    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * lamb * la.norm(N.dot(z) + x0)**2
-    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + lamb * NT.dot(N.dot(z) + x0)
+    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * lamb * la.norm(N.dot(z) + x0)**2
+    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + lamb * NT.dot(N.dot(z) + x0)
 
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
         # projected_value = pysimplex_projection(block_sizes - 1,x)
         return projected_value
 
-    #z0 = np.zeros(N.shape[1])
-    z0 = np.random.random(N.shape[1])
+    z0 = np.zeros(N.shape[1])
+    #z0 = np.random.random(N.shape[1])
 
     import time
     iters, times, states = [], [], []
@@ -129,7 +130,10 @@ def main(filepath):
         A_dore = None
     elif args.solver == 'COMBINED':
         z_sol = solve(z0, f, nabla_f, solvers.stopping, log=log, proj=proj, options=options)
-
+    elif args.solver == 'CONT':
+        f_l = lambda z,lamb: 0.5 * la.norm(A.dot(N.dot(z)) + lamb*target)**2 + 0.5 *lamb* la.norm(N.dot(z) + x0)**2
+        nabla_f_l = lambda z,lamb: NT.dot(AT.dot(A.dot(N.dot(z)) + lamb*target)) +  lamb*NT.dot(N.dot(z) + x0)
+        z_sol = continuation_solver.solve(z0, f_l, nabla_f_l, solvers.stopping, log=log, proj=proj, options=options, solve=BB.solve)
     logging.debug('Stopping %s solver...' % args.solver)
 
     # Plot some stuff
@@ -171,7 +175,8 @@ if __name__ == "__main__":
     
     for d in density:
         matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
-        for i in [3, 10, 20, 30, 40, 50]:
+        print matrix_dir
+        for i in reversed([3, 10, 20, 30, 40, 50]):
             infile = "%s/experiment2_waypoints_matrices_routes_%s.mat" % (d,i)
             x, fx = main(infile)
             outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, matrix_dir, i)
