@@ -8,7 +8,7 @@ import os
 from scipy.sparse.linalg import LinearOperator
 import scipy.linalg.interpolative as inter
 import pickle
-BASE_DIR = '/home/lei/traffic/plots/experiment_matrices'#'%s/%s'%(config.DATA_DIR, config.EXPERIMENT_MATRICES_DIR)
+BASE_DIR = '%s/%s'%(config.PLOT_DIR, config.EXPERIMENT_MATRICES_DIR)
 b_50 = None
 def b_estimate():
     global b_50
@@ -114,7 +114,7 @@ def read_ranks(density):
 
     return [rank(A,U) for A, U in [readAU(f) for f in mf]]
 if __name__== '__main__':
-    density = [3800,2850,1900,1425,950,713,475,238,0]
+    density = config.WAYPOINT_DENSITIES
     stats = {d:plot_GEH_vs_route_number_waypoints("{0}/{1}".format(BASE_DIR,d), "{0}/{1}".format(config.PLOT_DIR, d)) for d in density}
     pickle.dump(stats, open(config.PLOT_DIR +'/stats.pkl','w'))
     #read_ranks(3800)
