@@ -56,6 +56,8 @@ def flowerror(x_sol, x_true, flow):
 def get_statistics_from(solution_file, problem_file):
     print problem_file, solution_file
     A, x, b, N, block_size, flow= read_problem_matrices(problem_file)
+    A = A[0:1033,:]
+    print(A.shape)
     print N.shape
     x_hat, fx = read_x_computed(solution_file,block_size, N)
     geh = metrics(A, b, x_hat)
