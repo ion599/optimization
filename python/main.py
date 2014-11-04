@@ -9,7 +9,7 @@ import solvers
 import util
 from c_extensions.simplex_projection import simplex_projection
 # from projection import pysimplex_projection
-import BB, LBFGS, DORE, continuation_solver
+import BB, LBFGS, DORE
 import config as c
 
 def parser():
@@ -23,38 +23,15 @@ def parser():
     parser.add_argument('--noise',dest='noise',type=float,default=None,
             help='Noise level')
     return parser
-def solve(z0, f, nabla_f, stopping, log, proj, options):
-    preconditionoptions = { 'max_iter': 1000,
-                'verbose': 1,
-                'suff_dec': 0.003, # FIXME unused
-                'corrections': 500 } # FIXME unused
-    z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
-                options=preconditionoptions)
-    restart = 0
-    while restart < 10 and f(z0) > 1:
-        restart += 1
-        try:
-            z0 = LBFGS.solve(z0, f, nabla_f, stopping, log=log,proj=proj,
-                    options=options) 
-            break
-        except ArithmeticError:
-            pass
-        print('restarting')
-        z0 = BB.solve(z0,f,nabla_f, solvers.stopping,log=log,proj=proj,
-            options=preconditionoptions)
-    return z0
 
-def homotopySolver(z0, f, nabla_f, stopping, log, proj, options):
-    pass
-
-def main(filepath):
+def main():
     p = parser()
     args = p.parse_args()
     if args.log in c.ACCEPTED_LOG_LEVELS:
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # load data
-    filepath = '%s/%s/%s' % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, filepath)
+    filepath = '%s/%s/%s' % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, args.file)
     A, b, N, block_sizes, x_true, nz, flow = util.load_data(filepath)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
@@ -84,20 +61,12 @@ def main(filepath):
     f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
     nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
-    # regularization included
-    lamb = 1
-    #lamb = 1.0/N.shape[1]
-
-    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2 + 0.5 * lamb * la.norm(N.dot(z) + x0)**2
-    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target)) + lamb * NT.dot(N.dot(z) + x0)
-
     def proj(x):
         projected_value = simplex_projection(block_sizes - 1,x)
         # projected_value = pysimplex_projection(block_sizes - 1,x)
         return projected_value
 
     z0 = np.zeros(N.shape[1])
-    #z0 = np.random.random(N.shape[1])
 
     import time
     iters, times, states = [], [], []
@@ -110,11 +79,11 @@ def main(filepath):
 
     logging.debug('Starting %s solver...' % args.solver)
     if args.solver == 'LBFGS':
-        z_sol = LBFGS.solve(z0+1, f, nabla_f, solvers.stopping, log=log,proj=proj,
+        LBFGS.solve(z0+1, f, nabla_f, solvers.stopping, log=log,proj=proj,
                 options=options)
         logging.debug("Took %s time" % str(np.sum(times)))
     elif args.solver == 'BB':
-        z_sol = BB.solve(z0,f,nabla_f,solvers.stopping,log=log,proj=proj,
+        BB.solve(z0,f,nabla_f,solvers.stopping,log=log,proj=proj,
                 options=options)
     elif args.solver == 'DORE':
         # setup for DORE
@@ -128,12 +97,6 @@ def main(filepath):
                 lambda b: N.T.dot(A_dore.T.dot(b)), target_dore, proj=proj,
                 log=log,options=options)
         A_dore = None
-    elif args.solver == 'COMBINED':
-        z_sol = solve(z0, f, nabla_f, solvers.stopping, log=log, proj=proj, options=options)
-    elif args.solver == 'CONT':
-        f_l = lambda z,lamb: 0.5 * la.norm(A.dot(N.dot(z)) + lamb*target)**2 + 0.5 *lamb* la.norm(N.dot(z) + x0)**2
-        nabla_f_l = lambda z,lamb: NT.dot(AT.dot(A.dot(N.dot(z)) + lamb*target)) +  lamb*NT.dot(N.dot(z) + x0)
-        z_sol = continuation_solver.solve(z0, f_l, nabla_f_l, solvers.stopping, log=log, proj=proj, options=options, solve=BB.solve)
     logging.debug('Stopping %s solver...' % args.solver)
 
     # Plot some stuff
@@ -158,26 +121,17 @@ def main(filepath):
     print 'percent flow allocated incorrectly: %f' % per_flow
     print '0.5norm(A*x-b)^2: %8.5e\n0.5norm(A*x_init-b)^2: %8.5e\n0.5norm(A*x*-b)^2: %8.5e\nmax|x-x_true|: %.2f\nmax|x_init-x_true|: %.2f\n\n\n' % \
         (error[-1], starting_error, opt_error, dist_from_true,start_dist_from_true)
-    # import ipdb
-    # ipdb.set_trace()
-    #
-    # plt.figure()
-    # plt.hist(x_last)
-    #
-    # plt.figure()
-    # plt.loglog(np.cumsum(times),error)
-    # plt.show()
+    import ipdb
+    ipdb.set_trace()
 
-    return z_sol, f(z_sol)
+    plt.figure()
+    plt.hist(x_last)
+
+    plt.figure()
+    plt.loglog(np.cumsum(times),error)
+    plt.show()
+
+    return iters, times, states
 
 if __name__ == "__main__":
-    density = [3800,2850,1900,1425,950,713,475,238,0]
-    
-    for d in density:
-        matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
-        print matrix_dir
-        for i in reversed([3, 10, 20, 30, 40, 50]):
-            infile = "%s/experiment2_waypoints_matrices_routes_%s.mat" % (d,i)
-            x, fx = main(infile)
-            outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, matrix_dir, i)
-            sio.savemat(outputfile, {'x':x,'fx':fx})
+    iters, times, states = main()

@@ -1,9 +1,9 @@
-import config
+import python.config as config
 import matplotlib.pyplot as pyplot
 import scipy.io as sio
 import scipy
 import numpy as np
-import util
+import python.util as util
 import os
 from scipy.sparse.linalg import LinearOperator
 import scipy.linalg.interpolative as inter
@@ -53,16 +53,23 @@ def metrics(A,b,X):
 def flowerror(x_sol, x_true, flow):
     return np.sum(flow * np.abs((x_sol-np.matrix(x_true).T))) / np.sum(flow * x_true)
 
+def flowerror_larger_than(x_sol, x_true, flow, n):
+    gtn = flow > n
+    x_sol=x_sol[gtn]
+    x_true = x_true[gtn]
+    flow = flow[gtn]
+    return np.sum(flow * np.abs((x_sol-np.matrix(x_true).T))) / np.sum(flow * x_true)
+
 def get_statistics_from(solution_file, problem_file):
     print problem_file, solution_file
     A, x, b, N, block_size, flow= read_problem_matrices(problem_file)
-    A = A[0:1033,:]
+
     print(A.shape)
     print N.shape
     x_hat, fx = read_x_computed(solution_file,block_size, N)
     geh = metrics(A, b, x_hat)
-    print flowerror(x_hat, x, flow)
-    geh['flow_per_error'] = flowerror(x_hat, x, flow)
+    print flowerror_larger_than(x_hat, x, flow,25)
+    geh['flow_per_error'] = flowerror_larger_than(x_hat, x, flow,25)
     return geh
 
 def plot_GEH(routes, GEH, errorstat, xlabel, ylabel):
@@ -85,23 +92,24 @@ def plot_GEH_vs_route_number_waypoints(directory, save_directory):
     if not os.path.exists(save_directory):
         os.makedirs(save_directory)
     statistics = [get_statistics_from(o, m) for o, m in zip(outputfiles, matrixfiles)]
-    plot_GEH(routes, statistics, 'mean_GEH', "Maximum Route Number", "Mean GEH")
-    pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'mean_GEH', "png"))
-    pyplot.figure()
-    plot_GEH(routes, statistics, 'GEH_under_5', "Maximum Route Number", "Percent GEH under 5")
-    pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'GEH_under_5', "png"))
-    pyplot.figure()
-    plot_GEH(routes, statistics, 'GEH_under_0.5', "Maximum Route Number", "Percent GEH under .5")
-    pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'GEH_under_0.5', "png"))
-    pyplot.figure()
-    plot_GEH(routes, statistics, 'GEH_under_0.05', "Maximum Route Number", "Percent GEH under .05")
-    pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'GEH_under_0.05', "png"))
-    pyplot.figure()
-    plot_GEH(routes, statistics, 'flow_per_error', "Maximum Route Number", "Percent Flow Allocated Incorrectly")
-    pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'flow_per_error', "png"))
-    pyplot.figure()
-    pyplot.close('all')
+    # plot_GEH(routes, statistics, 'mean_GEH', "Maximum Route Number", "Mean GEH")
+    # pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'mean_GEH', "png"))
+    # pyplot.figure()
+    # plot_GEH(routes, statistics, 'GEH_under_5', "Maximum Route Number", "Percent GEH under 5")
+    # pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'GEH_under_5', "png"))
+    # pyplot.figure()
+    # plot_GEH(routes, statistics, 'GEH_under_0.5', "Maximum Route Number", "Percent GEH under .5")
+    # pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'GEH_under_0.5', "png"))
+    # pyplot.figure()
+    # plot_GEH(routes, statistics, 'GEH_under_0.05', "Maximum Route Number", "Percent GEH under .05")
+    # pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'GEH_under_0.05', "png"))
+    # pyplot.figure()
+    # plot_GEH(routes, statistics, 'flow_per_error', "Maximum Route Number", "Percent Flow Allocated Incorrectly")
+    # pyplot.savefig("{0}/{1}.{2}".format(save_directory, 'flow_per_error', "png"))
+    # pyplot.figure()
+    # pyplot.close('all')
     return statistics
+
 def read_ranks(density):
     mf = matrix_files("{0}/{1}".format(BASE_DIR,density))
     def readAU(f):

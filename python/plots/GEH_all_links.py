@@ -1,17 +1,17 @@
 from scipy import io as sio
-import util
-import config
+import python.util as util
+import python.config as config
 import numpy as np
 from matplotlib import pyplot
 
 def allLinksB():
-    dir = '{0}/{1}/{2}/{3}/experiment2_total_link_matrices_routes_50.mat'.format(config.PLOT_DIR, config.EXPERIMENT_MATRICES_DIR, config.ALL_LINK_DIR,3800)
+    dir = '{0}/{1}/{2}/{3}/experiment2_all_link_matrices_routes_2000.mat'.format(config.PLOT_DIR, config.EXPERIMENT_MATRICES_DIR, config.ALL_LINK_DIR,950)
     matrix = sio.loadmat(dir)['b']
     return matrix
 
 def allLinksA(density, routes):
     dir1 = '{0}/{1}/{2}'.format(config.PLOT_DIR, config.EXPERIMENT_MATRICES_DIR, config.ALL_LINK_DIR)
-    dir2 = '{0}/experiment2_total_link_matrices_routes_{1}.mat'.format(density,routes)
+    dir2 = '{0}/experiment2_all_link_matrices_routes_{1}.mat'.format(density,routes)
     matrix = sio.loadmat('{0}/{1}'.format(dir1, dir2))['A']
     return matrix
 
@@ -23,7 +23,7 @@ def readZ(density, routes):
 
 def readB(density, routes):
     dir1 = '{0}/{1}/{2}'.format(config.PLOT_DIR, config.EXPERIMENT_MATRICES_DIR, config.ALL_LINK_DIR)
-    dir2 = '{0}/experiment2_total_link_matrices_routes_{1}.mat'.format(density,routes)
+    dir2 = '{0}/experiment2_all_link_matrices_routes_{1}.mat'.format(density,routes)
     matrix = sio.loadmat('{0}/{1}'.format(dir1, dir2))['b']
     return matrix
 
@@ -63,18 +63,16 @@ def GEH_bin700(b_est, b_true):
     print len(b_est)
     return GEH(np.array(b_est), np.array(b_true))
 
+def percent_under(n, xs):
+    return sum(1.0 for x in xs if x < n)/len(xs)
+
 def percent_under5(xs):
-    #y = xs[np.logical_not(np.isnan(xs))]
-    #print xs[np.isnan(xs)].shape
-    #n, bins, patches = pyplot.hist(y, 10, facecolor='green', alpha=0.5)
-    #pyplot.show(    )
-    #pyplot.close('All')
     return sum(1.0 for x in xs if x < 5)/len(xs)
 
 def geh_by_bin(b_est, b_true):
-    geh = percent_under5(GEH_bin2700(b_est, b_true))
-    geh2 = percent_under5(GEH_bin700_2700(b_est, b_true))
-    geh3 = percent_under5(GEH_bin700(b_est, b_true))
+    geh = percent_under(4,GEH_bin2700(b_est, b_true))
+    geh2 = percent_under(4,GEH_bin700_2700(b_est, b_true))
+    geh3 = percent_under(4,GEH_bin700(b_est, b_true))
     print geh, geh2, geh3
     return geh, geh2, geh3
 
@@ -125,9 +123,9 @@ def plot_routes_vs_geh(waypoint_density):
 
     pyplot.title('MATSim link flow error', fontsize=22, weight='bold')
     pyplot.xlabel('Routes', fontsize=22)
-    pyplot.ylabel('% (GEH < 5)', fontsize=22)
+    pyplot.ylabel('% (GEH < 4)', fontsize=22)
     pyplot.xticks(fontsize=18)
     pyplot.yticks(fontsize=18)
     pyplot.show()
 
-plot_routes_vs_geh(950)
+plot_routes_vs_geh(3800)
