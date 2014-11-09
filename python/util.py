@@ -1,7 +1,10 @@
+import ipdb
+
 import scipy.sparse
 import scipy.sparse.linalg
 import scipy.sparse.linalg as sla
 import numpy as np
+import numpy.linalg as la
 import scipy.io as sio
 from scipy.linalg import block_diag
 import scipy.sparse as sps
@@ -18,6 +21,16 @@ EQ_CONSTR_ELIM = 'equality constraint elimination'
 L_BFGS = 'L-BFGS'
 SPG = 'SPG'
 ADMM = 'ADMM'
+
+# Clean array wrapper
+def array(x):
+    return np.squeeze(np.array(x))
+
+# Clean sparse matrix wrapper
+def sparse(A):
+    if type(A) == np.ndarray:
+        return sps.csr_matrix(A)
+    return A.tocsr()
 
 # Check if all entries equal
 def all_equal(x,y):
@@ -44,9 +57,9 @@ def J():
 def block_J(Js):
     return block_diag(Js)
 
-def block_sizes_from_U(U):
+def get_block_sizes(U):
     # Sum along rows
-    return np.squeeze(np.asarray(U.sum(axis=1)))
+    return array(U.sum(axis=1)).astype(int)
 
 def block_sizes_to_N(block_sizes):
     """Converts a list of the block sizes to a scipy.sparse matrix.
@@ -71,7 +84,7 @@ def block_sizes_to_N(block_sizes):
             N[start_row+j+1, start_col+j] = -1
         start_row += block_size
         start_col += block_size - 1
-    return N.tocsr()
+    return sparse(N)
 
 def block_sizes_to_x0(block_sizes):
     """Converts a list of the block sizes to a scipy.sparse vector x0
@@ -98,69 +111,147 @@ def load_weights(filename,block_sizes,weight=1):
     blocks = [b/sum(b) for b in blocks]
     return weight*np.array([e for b in blocks for e in b])
 
-def load_data(filename):
+def assert_simplex_incidence(M,n):
+    """
+    1. Check that the width of the matrix is correct.
+    2. Check that each column sums to 1
+    3. Check that there are exactly n nonzero values
+    :param M:
+    :param n:
+    :return:
+    """
+    assert M.shape[1] == n, 'Incidence matrix: wrong size'
+    assert (M.sum(axis=0)-1).any() == False,\
+        'Incidence matrix: columns should sum to 1'
+    assert M.nnz == n, 'Incidence matrix: should be n nonzero values'
+
+def assert_scaled_incidence(M):
+    """
+    Check that all column entries are either 0 or the same entry value
+
+    Replicated from grid_networks/static_matrix.py
+    :param M:
+    :return:
+    """
+    m,n = M.shape
+    col_sum = M.sum(axis=0)
+    col_nz = (M > 0).sum(axis=0)
+    entry_val = np.array([0 if M[:,i].nonzero()[0].size == 0 else \
+                              M[M[:,i].nonzero()[0][0],i] for i in range(n)])
+    assert (np.abs(col_sum - col_nz * entry_val) < 1e-10).all(), \
+        'Not a proper scaled incidence matrix, check column entries'
+
+def load_data(filename,full=False,OD=False,CP=False,eq=None):
+    """
+    Load data from file about network state
+
+    Notation:
+    x_true = route flow
+    x_split = route split
+
+    :param filename:
+    :param full: Use A_full, b_full instead of A,b
+    :param OD: Extract information from T
+    :param CP: Extract information from U
+    :param eq: None uses block_sizes to generate equality constraint; OD uses
+                T to generate equality constraint; CP uses U
+    :return:
+    """
     logging.debug('Loading %s...' % filename)
     data = sio.loadmat(filename)
     logging.debug('Unpacking...')
 
-    if data.has_key('phi'):
-        A = data['phi']
-    else:
-        A = data['A']
-    A = A.tocsr()
+    # Link-route and route
+    # FIXME deprecate use of key 'x'
+    if full and 'A_full' in data and 'b_full' in data and 'x_true' in data:
+        x_true = array(data['x_true'])
+        A = sparse(data['A_full'])
+        b = array(data['b_full'])
+    elif 'A' in data and 'b' in data:
+        x_true = array(data['x_true'])
+        A = sparse(data['A'])
+        b = array(data['b'])
+    elif 'phi' in data and 'b' in data and 'real_a' in data:
+        x_true = array(data['real_a'])
+        A = sparse(data['phi'])
+        b = array(data['b'])
+    assert_scaled_incidence(A)
+
     # Remove rows of zeros (unused sensors)
     nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
     nnz = [i for i in xrange(A.shape[0]) if A[i,:].nnz > 0]
-    A = sps.lil_matrix(A[nnz,:]).tocsr()
+    A, b = A[nnz,:], b[nnz]
+    assert la.norm(A.dot(x_true) - b) < 1e-3, 'Check data input: Ax != b'
 
-    if data.has_key('x'):
-        x_true = data['x']
-    else:
-        x_true = data['real_a']
-    x_true = np.squeeze(np.array(x_true))
-
-    if data.has_key('f'):
-        f = data['f']
-    else:
-        f = np.squeeze(A.sum(axis=0)/(A > 0).sum(axis=0))
-        f[np.isnan(f)]=0 # FIXME this is not accurate
-    f = np.squeeze(np.array(f))
+    n = x_true.shape[0]
+    # OD-route
+    if OD and 'T' in data and 'd' in data:
+        T,d = sparse(data['T']), array(data['d'])
+        assert_simplex_incidence(T, n) # ASSERT
+    # Cellpath-route
+    if CP and 'U' in data and 'f' in data:
+        U,f = sparse(data['U']), array(data['f'])
+        assert_simplex_incidence(U, n) # ASSERT
 
     # Reorder routes by blocks of flow, e.g. OD flow or waypoint flow given by U
     if data.has_key('block_sizes'):
-        block_sizes = data['block_sizes']
-    elif data.has_key('U'):
-        U = data['U'].tocsr()
-        rank = U.nonzero()[0]
+        eq = None
+        block_sizes = array(data['block_sizes'])
+        rsort_index = None
+    else:
+        W = T if eq == 'OD' else U
+        block_sizes = get_block_sizes(W)
+        rank = W.nonzero()[0]
         sort_index = np.argsort(rank)
-        U = sps.lil_matrix(U[:,sort_index]).tocsr() # reorder
-        A = sps.lil_matrix(A[:,sort_index]).tocsr() # reorder
+
+        if CP and 'U' in data:
+            U = U[:,sort_index] # reorder
+        if OD and 'T' in data:
+            T = T[:,sort_index] # reorder
+        A = A[:,sort_index] # reorder
         x_true = x_true[sort_index] # reorder
+        rsort_index = np.argsort(sort_index) # revert sort
 
-        block_sizes = block_sizes_from_U(U).astype(int)
-
-    # if data.has_key('b'):
-    b = data['b']
-    # else:
-    #     b = data['f']
-    b = np.squeeze(np.asarray(b[:,nnz]))
-    #b = A.dot(x_true)
-    #print np.linalg.norm(b-b_false)
     logging.debug('Creating sparse N matrix')
     N = block_sizes_to_N(block_sizes)
-    N = N.tocsr()
 
     logging.debug('File loaded successfully')
 
-    return (A, b, N, block_sizes, x_true, nz, f)
+    # Scale matrices by block
+    print la.norm(A.dot(x_true) - b)
+    if eq == 'OD' and 'T' in data:
+        scaling =  T.T.dot(T.dot(x_true))
+        x_split = x_true / scaling
+        DT = sps.diags([scaling],[0])
+        A = A.dot(DT)
+        if CP and 'U' in data:
+            U = U.dot(DT)
+            AA,bb = sps.vstack([A,U]), np.concatenate((b,f))
+        else:
+            AA,bb = A,b
+    elif eq == 'CP' and 'U' in data:
+        scaling =  U.T.dot(U.dot(x_true))
+        x_split = x_true / scaling
+        DU = sps.diags([scaling],[0])
+        A = A.dot(DU)
+        if OD and 'T' in data:
+            T = T.dot(DU)
+            AA,bb = sps.vstack([A,T]), np.concatenate((b,d))
+        else:
+            AA,bb = A,b
+    else:
+        x_split = x_true
+        # TODO what is going on here????
+        scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
+        scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
+        AA,bb = A,b
+    assert la.norm(A.dot(x_split) - b) < 1e-3, 'Improper scaling: Ax != b'
+
+    return (AA, bb, N, block_sizes, x_split, nz, scaling, rsort_index)
 
 def AN(A,N):
     # TODO port from preADMM.m (lines 3-21)
     return A.dot(N)
-
-# Do we ever use U?
-def U(block_sizes):
-    pass
 
 def lsv_operator(A, N):
     """Computes largest singular value of AN
@@ -175,7 +266,10 @@ def lsv_operator(A, N):
 
     def rmatmuldyad(v):
         return N.T.dot(A.T.dot(v))
-    normalized_lin_op = scipy.sparse.linalg.LinearOperator((A.shape[0], N.shape[1]), matmuldyad, rmatmuldyad)
+    normalized_lin_op = scipy.sparse.linalg.LinearOperator((A.shape[0],
+                                                            N.shape[1]),
+                                                           matmuldyad,
+                                                           rmatmuldyad)
 
     # Given v, computes (N^TA^TAN)v
     def matvec_XH_X(v):
@@ -187,9 +281,11 @@ def lsv_operator(A, N):
     return_singular_vectors=False
 
     # Builds linear operator object
-    XH_X = scipy.sparse.linalg.LinearOperator(matvec=matvec_XH_X, dtype=A.dtype, shape=(N.shape[1], N.shape[1]))
+    XH_X = scipy.sparse.linalg.LinearOperator(matvec=matvec_XH_X, dtype=A.dtype,
+                                              shape=(N.shape[1], N.shape[1]))
     # Computes eigenvalues of (N^TA^TAN), the largest of which is the LSV of AN
-    eigvals = sla.eigs(XH_X, k=1, tol=0, maxiter=None, ncv=10, which=which, v0=v0, return_eigenvectors=False)
+    eigvals = sla.eigs(XH_X, k=1, tol=0, maxiter=None, ncv=10, which=which,
+                       v0=v0, return_eigenvectors=False)
     lsv = np.sqrt(eigvals)
     # Take largest one
     return lsv[0].real
@@ -234,14 +330,22 @@ def init_xz(block_sizes, x_true):
     ind_end = np.cumsum(block_sizes)
     ind_start = np.hstack(([0],ind_end[:-1]))
     x1 = np.divide(x1, \
-                   np.concatenate([np.sum(x1[i:j])*np.ones((k,1)) for i,j,k in zip(ind_start,ind_end,block_sizes)]))
+                   np.concatenate([np.sum(x1[i:j])*np.ones((k,1)) for i, j, k \
+                                   in zip(ind_start,ind_end,block_sizes)]))
     
-    tmp = np.concatenate([np.argsort(np.argsort(x_true[i:j])) for i,j in zip(ind_start,ind_end)]) + 1
+    tmp = np.concatenate([np.argsort(np.argsort(x_true[i:j])) for i,j in \
+                          zip(ind_start,ind_end)]) + 1
     x2 = np.divide(tmp, \
-                   np.squeeze(np.concatenate([np.sum(tmp[i:j])*np.ones((k,1)) for i,j,k in zip(ind_start,ind_end,block_sizes)])))
+                   np.squeeze(np.concatenate([np.sum(tmp[i:j])*np.ones((k,1)) \
+                                              for i,j,k in zip(ind_start,
+                                                               ind_end,
+                                                               block_sizes)])))
     tmp = np.power(10, tmp)
     x3 = np.divide(tmp, \
-                   np.squeeze(np.concatenate([np.sum(tmp[i:j])*np.ones((k,1)) for i,j,k in zip(ind_start,ind_end,block_sizes)])))
+                   np.squeeze(np.concatenate([np.sum(tmp[i:j])*np.ones((k,1)) \
+                                              for i,j,k in zip(ind_start,
+                                                               ind_end,
+                                                               block_sizes)])))
     x4 = np.concatenate([(1./k)*np.ones((k,1)) for k in block_sizes])
     
     z1 = x2z(x1, block_sizes)
