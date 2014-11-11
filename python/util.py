@@ -129,7 +129,6 @@ def assert_scaled_incidence(M):
     """
     Check that all column entries are either 0 or the same entry value
 
-    Replicated from grid_networks/static_matrix.py
     :param M:
     :return:
     """
@@ -138,7 +137,7 @@ def assert_scaled_incidence(M):
     col_nz = (M > 0).sum(axis=0)
     entry_val = np.array([0 if M[:,i].nonzero()[0].size == 0 else \
                               M[M[:,i].nonzero()[0][0],i] for i in range(n)])
-    assert (np.abs(col_sum - col_nz * entry_val) < 1e-10).all(), \
+    assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < 1e-10).all(), \
         'Not a proper scaled incidence matrix, check column entries'
 
 def load_data(filename,full=False,OD=False,CP=False,eq=None):
