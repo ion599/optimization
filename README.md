@@ -35,6 +35,13 @@ To run 3-fold cross validation test:
 python CrossValidation.py --log=DEBUG
 ```
 
+Running ISTTT
+-------------
+After generating the set of matrices run:
+```
+python ISTTT.py --log=DEBUG --solver BB
+```
+
 MATLAB setup
 ------------
 <a name="matlab-setup"></a>
