@@ -55,14 +55,14 @@ def main(filepath):
 
     # load data
     filepath = '%s/%s/%s' % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, filepath)
-    A, b, N, block_sizes, x_true, nz, flow = util.load_data(filepath)
+    A, b, N, block_sizes, x_true, nz, flow, _ = util.load_data(filepath, CP=True)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
 
     if args.noise:
         b_true = b
-        delta = np.random.normal (scale=b*args.noise)
-        b = b + delta
+    delta = np.random.normal (scale=b*1)
+    b = b + delta
 
     # Sample usage
     #P = A.T.dot(A)
@@ -173,10 +173,10 @@ def main(filepath):
 if __name__ == "__main__":
     density =c.WAYPOINT_DENSITIES
 
-    for d in density:
+    for d in [950]:
         matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
         print matrix_dir
-        for i in reversed([50,40,30,20,10,3]):
+        for i in [50]:
             infile = "%s/experiment2_waypoints_matrices_routes_%s.mat" % (d,i)
             x, fx = main(infile)
             outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, matrix_dir, i)

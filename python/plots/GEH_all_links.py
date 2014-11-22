@@ -30,7 +30,7 @@ def readB(density, routes):
 def readX(density,routes):
     dir1 = '{0}/{1}'.format(config.PLOT_DIR, config.EXPERIMENT_MATRICES_DIR)
     dir2 = '{0}/experiment2_waypoints_matrices_routes_{1}.mat'.format(density,routes)
-    A, b, N, block_sizes, x_true, nz, f = util.load_data('{0}/{1}'.format(dir1, dir2))
+    A, b, N, block_sizes, x_true, nz, f, _ = util.load_data('{0}/{1}'.format(dir1, dir2), CP=True)
     x0 = np.array([util.block_e(block_sizes - 1, block_sizes)])
     return x0.T + N*readZ(density,routes).T
 
@@ -70,9 +70,10 @@ def percent_under5(xs):
     return sum(1.0 for x in xs if x < 5)/len(xs)
 
 def geh_by_bin(b_est, b_true):
-    geh = percent_under(4,GEH_bin2700(b_est, b_true))
-    geh2 = percent_under(4,GEH_bin700_2700(b_est, b_true))
-    geh3 = percent_under(4,GEH_bin700(b_est, b_true))
+    n = 4
+    geh = percent_under(n,GEH_bin2700(b_est, b_true))
+    geh2 = percent_under(n,GEH_bin700_2700(b_est, b_true))
+    geh3 = percent_under(n,GEH_bin700(b_est, b_true))
     print geh, geh2, geh3
     return geh, geh2, geh3
 
@@ -94,7 +95,7 @@ def plot_waypoint_vs_geh(num_routes = 50):
 
     pyplot.title('MATSim link flow error', fontsize=22, weight='bold')
     pyplot.xlabel('Number of cells', fontsize=22)
-    pyplot.ylabel('% (GEH < 5)', fontsize=22)
+    pyplot.ylabel('% (GEH < 4)', fontsize=22)
 
     pyplot.show()
 
@@ -121,11 +122,12 @@ def plot_routes_vs_geh(waypoint_density):
     pyplot.ylim([0,1.1])
     pyplot.xlim([0,60])
 
-    pyplot.title('MATSim link flow error', fontsize=22, weight='bold')
+    pyplot.title('MATSim link flow error (Towers = {0})'.format(waypoint_density), fontsize=22, weight='bold')
     pyplot.xlabel('Routes', fontsize=22)
     pyplot.ylabel('% (GEH < 4)', fontsize=22)
     pyplot.xticks(fontsize=18)
     pyplot.yticks(fontsize=18)
     pyplot.show()
 
+#plot_waypoint_vs_geh()
 plot_routes_vs_geh(950)
