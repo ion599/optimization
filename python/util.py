@@ -140,12 +140,6 @@ def assert_scaled_incidence(M):
     assert (np.abs(array(col_sum) - array(col_nz) * entry_val) < 1e-10).all(), \
         'Not a proper scaled incidence matrix, check column entries'
 
-def load_x_true(data):
-    if 'x_true' in data:
-        return array(data['x_true'])
-    if 'x' in data:
-        return array(data['x'])
-
 def load_data(filename,full=False,OD=False,CP=False,eq=None):
     """
     Load data from file about network state
@@ -162,7 +156,6 @@ def load_data(filename,full=False,OD=False,CP=False,eq=None):
                 T to generate equality constraint; CP uses U
     :return:
     """
-    print filename
     logging.debug('Loading %s...' % filename)
     data = sio.loadmat(filename)
     logging.debug('Unpacking...')
@@ -174,14 +167,14 @@ def load_data(filename,full=False,OD=False,CP=False,eq=None):
         A = sparse(data['A_full'])
         b = array(data['b_full'])
     elif 'A' in data and 'b' in data:
-        x_true = load_x_true(data)
+        x_true = array(data['x_true'])
         A = sparse(data['A'])
         b = array(data['b'])
     elif 'phi' in data and 'b' in data and 'real_a' in data:
         x_true = array(data['real_a'])
         A = sparse(data['phi'])
         b = array(data['b'])
-    #assert_scaled_incidence(A)
+    assert_scaled_incidence(A)
 
     # Remove rows of zeros (unused sensors)
     nz = [i for i in xrange(A.shape[0]) if A[i,:].nnz == 0]
@@ -248,9 +241,8 @@ def load_data(filename,full=False,OD=False,CP=False,eq=None):
     else:
         x_split = x_true
         # TODO what is going on here????
-        #scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
-        #scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
-        scaling = f
+        scaling = array(A.sum(axis=0)/(A > 0).sum(axis=0))
+        scaling[np.isnan(scaling)]=0 # FIXME this is not accurate
         AA,bb = A,b
     assert la.norm(A.dot(x_split) - b) < 1e-3, 'Improper scaling: Ax != b'
 
