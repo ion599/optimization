@@ -54,15 +54,15 @@ def main(filepath):
         logging.basicConfig(level=eval('logging.'+args.log))
 
     # load data
-    filepath = '%s/%s/%s' % (c.DATA_DIR, c.EXPERIMENT_MATRICES_DIR, filepath)
-    A, b, N, block_sizes, x_true, nz, flow = util.load_data(filepath)
+    filepath = '%s/%s' % (c.EXPERIMENT_MATRICES_DIR, filepath)
+    A, b, N, block_sizes, x_true, nz, flow, _ = util.load_data(filepath, CP=True)
     sio.savemat('fullData.mat', {'A':A,'b':b,'N':block_sizes,'N2':N,
         'x_true':x_true})
-
+    print A.shape
     if args.noise:
         b_true = b
-        delta = np.random.normal (scale=b*args.noise)
-        b = b + delta
+    delta = np.random.normal (scale=b*1)
+    b = b + delta
 
     # Sample usage
     #P = A.T.dot(A)
@@ -81,8 +81,8 @@ def main(filepath):
     AT = A.T.tocsr()
     NT = N.T.tocsr()
 
-    #f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
-    #nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
+    f = lambda z: 0.5 * la.norm(A.dot(N.dot(z)) + target)**2
+    nabla_f = lambda z: NT.dot(AT.dot(A.dot(N.dot(z)) + target))
 
     # regularization included
     lamb = 1
@@ -171,13 +171,11 @@ def main(filepath):
     return z_sol, f(z_sol)
 
 if __name__ == "__main__":
-    density =c.WAYPOINT_DENSITIES
-
-    for d in density:
+    for d in c.WAYPOINT_DENSITIES:
         matrix_dir = "{0}/{1}".format(c.EXPERIMENT_MATRICES_DIR, d)
         print matrix_dir
-        for i in reversed([50,40,30,20,10,3]):
+        for i in [50,40,30,20,10,3]:
             infile = "%s/experiment2_waypoints_matrices_routes_%s.mat" % (d,i)
             x, fx = main(infile)
-            outputfile = "%s/%s/output_waypoints%s.mat" % (c.DATA_DIR, matrix_dir, i)
+            outputfile = "%s/output_waypoints%s.mat" % (matrix_dir, i)
             sio.savemat(outputfile, {'x':x,'fx':fx})
