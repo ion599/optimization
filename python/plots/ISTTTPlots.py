@@ -58,6 +58,12 @@ def load_all_link(density, routes, experiment, load_high_route_b=True):
 
     return ExperimentResults(A, b, experiment.x, experiment.x_true, experiment.U, experiment.f, experiment.N, experiment.total_flow, experiment.captured_flow)
 
+class PlotTitles:
+    degrees_of_freedom = 'Deg. of freedom from cell data'
+    route_flow_error = 'Route flow error from cell data'
+    corrected_route_flow_error = 'Model route flow error from cell data'
+    geh = 'MATsim link flow error'
+
 # ExperimentResults class to handle calculating numerical values for our problem
 class ExperimentResults:
     def __init__(self, A, b, x, x_true, U, f, N, total_flow, captured_flow):
@@ -73,6 +79,7 @@ class ExperimentResults:
 
     #flow error
     def flow_error(self):
+        print np.sum(self.f * np.abs(self.x-self.x_true)) / np.sum(self.f * self.x_true)
         return np.sum(self.f * np.abs(self.x-self.x_true)) / np.sum(self.f * self.x_true)
 
     def model_corrected_flow_error(self):
@@ -88,7 +95,7 @@ class ExperimentResults:
         plus = b_estimate + b_true
 
         GEH = np.sqrt(2 * diff**2 / (np.maximum(np.zeros(plus.shape),plus) + 1e-12))
-
+        print GEH
         return GEH
 
     @staticmethod
@@ -96,7 +103,8 @@ class ExperimentResults:
         return sum(1.0 for x in xs if x < n)/len(xs)
 
     def geh(self, filter = lambda x,y: (x,y)):
-        b_est = np.dot(self.A, self.x)
+        print self.A.shape, self.x.shape
+        b_est = self.A.dot(self.x)
         b_est, b_true = filter(b_est, self.b)
 
         return ExperimentResults._GEH(np.array(b_est), np.array(b_true))
@@ -142,7 +150,7 @@ def null_plot(experiment_results, plot):
         #plots.append(p)
         p, = plot(xs, ys, '-o' + config.COLORS[i], linewidth=2)
         plots.append(p)
-    plot_format(plots, 'Degree of freedom', 'Cells', 'Degrees of freedom')
+    plot_format(plots, PlotTitles.degrees_of_freedom, 'Cells', 'Degree of freedom')
 
 def flow_error_plot(experiment_results, plot):
     plots = []
@@ -153,7 +161,7 @@ def flow_error_plot(experiment_results, plot):
         #plots.append(p)
         p, = plot(xs, ys, '-o' + config.COLORS[i], linewidth=2)
         plots.append(p)
-    plot_format(plots, 'Route flow error from cell + OD data', 'Cells', 'Relative error')
+    plot_format(plots, PlotTitles.route_flow_error, 'Cells', 'Relative error')
 
 def corrected_flow_error_plot(experiment_results, plot):
     plots = []
@@ -164,7 +172,7 @@ def corrected_flow_error_plot(experiment_results, plot):
         #plots.append(p)
         p, = plot(xs, ys, '-o' + config.COLORS[i], linewidth=2)
         plots.append(p)
-    plot_format(plots, 'Model route flow error from cell + OD data', 'Cells', 'Relative error')
+    plot_format(plots, PlotTitles.corrected_route_flow_error, 'Cells', 'Relative error')
 
 def between(x, a, b):
     return a <= x < b
@@ -207,7 +215,7 @@ def geh_plot(experiment_results, density, plot):
 
     plot([0,60],[.85,.85],'--k',linewidth=2)
 
-    geh_plot_format(plots, ['<700vph', '700-2700vph', '>2700vph'], 'MATsim link flow error', "Routes", "%(GEH < 5)")
+    geh_plot_format(plots, ['<700vph', '700-2700vph', '>2700vph'], PlotTitles.geh, "Routes", "%(GEH < 5)")
 
 
 def load_results(load_from_cache = True):
@@ -223,35 +231,54 @@ def load_results(load_from_cache = True):
             solution = solution_path(density, route)
             total_flow, captured_flow = modeled_flow(route)
             experiment_results[(density, route)] = load_experiment(problem, solution, total_flow, captured_flow)
+            experiment_results[(density, route)].flow_error()
 
     return experiment_results
 
 
 def create_ISTTT_plots(plot):
     experiment_results = load_results()
+    pyplot.figure()
     # Plot 1: The ranks of the matrices
     null_plot(experiment_results, pyplot.semilogy)
-    pyplot.savefig('degrees_of_freedom.svg')
+    pyplot.savefig('degrees_of_freedom.pdf')
     pyplot.savefig('degrees_of_freedom.png')
-    pyplot.show()
-
+    #pyplot.show()
+    pyplot.close()
+    pyplot.figure()
     # Plot 2: Flow Error
     flow_error_plot(experiment_results, pyplot.semilogy)
-    pyplot.savefig('flow_error.svg')
+    pyplot.savefig('flow_error.pdf')
     pyplot.savefig('flow_error.png')
-    pyplot.show()
-
+    #pyplot.show()
+    pyplot.close()
+    pyplot.figure()
     # Plot 3: Corrected Flow Error
     corrected_flow_error_plot(experiment_results, pyplot.semilogy)
-    pyplot.savefig('corrected_flow_error.svg')
+    pyplot.savefig('corrected_flow_error.pdf')
     pyplot.savefig('corrected_flow_error.png')
-    pyplot.show()
-
+    #pyplot.show()
+    pyplot.close()
+    pyplot.figure()
     # Plot 4: GEH Plots
     geh_plot(experiment_results, 1000, pyplot.plot)
-    pyplot.savefig('geh.svg')
-    pyplot.savefig('geh.png')
-    pyplot.show()
-
+    pyplot.savefig('geh-1000.pdf')
+    pyplot.savefig('geh-1000.png')
+    #pyplot.show()
+    pyplot.close()
+    pyplot.figure()
+    # Plot 4: GEH Plots
+    geh_plot(experiment_results, 2000, pyplot.plot)
+    pyplot.savefig('geh-2000.pdf')
+    pyplot.savefig('geh-2000.png')
+    #pyplot.show()
+    pyplot.close()
+    pyplot.figure()
+    # Plot 4: GEH Plots
+    geh_plot(experiment_results, 3000, pyplot.plot)
+    pyplot.savefig('geh-3000.pdf')
+    pyplot.savefig('geh-3000.png')
+    #pyplot.show()
+    pyplot.close()
 if __name__ == "__main__":
     create_ISTTT_plots(pyplot.semilogy)

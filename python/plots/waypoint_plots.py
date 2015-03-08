@@ -5,6 +5,7 @@ import scipy.io as sio
 import numpy as np
 
 from matplotlib import pyplot
+
 def correct_for_unmodeled_flow(p, route_number):
     modeled_flow = sio.loadmat(config.PLOT_DIR+'/modeled_flow.mat')
     total_flow = modeled_flow['total_flow']
@@ -44,7 +45,6 @@ def plot_waypoint_density_vs_error(plot,correction = lambda x, y: x):
     pyplot.ylim([0,5])
     pyplot.xlim([0,4000])
 
-
 def plot_waypoint_density_vs_error2(plot,correction = lambda x, y: x):
     f = open(config.PLOT_DIR + '/stats.pkl')
     stats = pickle.load(f)
@@ -66,10 +66,10 @@ def plot_waypoint_density_vs_error2(plot,correction = lambda x, y: x):
     pyplot.ylim([0,5])
     pyplot.xlim([0,4000])
 
-
 def convert_to_route_vs_percent_error(stats, waypoint):
     routes = [3,10,20,30,40,50]
     return routes, [s['flow_per_error'] for s in stats[waypoint]]
+
 def read_data(offset):
     routes = [3,10,20,30,40,50]
     blarg = [3800,3325,2850,2375,1900,1425,950,713,475,238]
@@ -104,7 +104,6 @@ plot_waypoint_density_vs_error(pyplot.semilogy)
 pyplot.title('MATSim route flow error from cell + OD data \n(AM)',fontsize=22, weight='bold')
 pyplot.show()
 pyplot.close('all')
-
 
 #plot_waypoint_density_vs_error(pyplot.semilogy,correct_for_unmodeled_flow)
 #pyplot.title('MATSim route flow error from cell + OD data \n(AM, model error)',fontsize=22, weight='bold')

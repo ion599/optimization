@@ -5,7 +5,7 @@ import numpy as np
 
 import pickle as pkl
 
-import util2 as util
+import python.util as util
 
 from scipy.sparse.linalg.interface import aslinearoperator, LinearOperator
 from scipy.sparse.linalg.eigen.arpack import eigsh

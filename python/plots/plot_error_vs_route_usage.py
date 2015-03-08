@@ -13,10 +13,10 @@ b_50 = None
 def b_estimate():
     global b_50
     if b_50 == None:
-         A, b_50, N, block_sizes, x_true, nz, flow = util.load_data('%s/experiment2_control_matrices_routes_%s.mat'% (BASE_DIR, 2000))
+         A, b_50, N, block_sizes, x_true, nz, flow, _ = util.load_data('%s/experiment2_control_matrices_routes_%s.mat'% (BASE_DIR, 2000), CP=True)
     return b_50
 def read_problem_matrices(filepath):
-    A, b, N, block_sizes, x_true, nz, flow = util.load_data(filepath)
+    A, b, N, block_sizes, x_true, nz, flow, _= util.load_data(filepath, CP=True)
     return A, x_true, b_estimate(), N, block_sizes, flow
 
 def read_x_computed(filepath, block_sizes, N):

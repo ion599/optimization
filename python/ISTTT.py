@@ -74,7 +74,7 @@ def main(filepath):
     x0 = np.array(util.block_e(block_sizes - 1, block_sizes))
     target = A.dot(x0)-b
 
-    options = { 'max_iter': 5000,
+    options = { 'max_iter': 10000,
                 'verbose': 1,
                 'suff_dec': 0.003, # FIXME unused
                 'corrections': 500 } # FIXME unused
